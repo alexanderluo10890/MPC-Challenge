@@ -8,6 +8,7 @@ import {
   Ban,
   BarChart3,
   CheckCircle2,
+  ChevronDown,
   Clipboard,
   Clock3,
   Database,
@@ -26,6 +27,7 @@ import {
   Sparkles,
   Upload,
   X,
+  Zap,
 } from "lucide-react";
 import {
   type ChangeEvent,
@@ -54,8 +56,12 @@ import {
   getFlaggedCases,
   parseTransactionsCsv,
 } from "./csv-analysis";
+import {
+  FraudSwipeStack,
+  type SwipeSessionStats,
+} from "@/components/ui/fraud-swipe-stack";
 
-type View = "upload" | "dashboard" | "review" | "audit" | "complete";
+type View = "upload" | "dashboard" | "review" | "audit" | "complete" | "swipe";
 type SensitivityMode = "Conservative" | "Balanced" | "Aggressive";
 type DetailTab = "Baseline" | "Related" | "Timeline" | "AI Summary";
 type ToastTone = "success" | "info" | "warning" | "error";
@@ -333,6 +339,7 @@ export default function FlaglyApp() {
   const [sensitivity, setSensitivity] =
     useState<SensitivityMode>("Balanced");
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
+  const [swipeStats, setSwipeStats] = useState<SwipeSessionStats>({ approved: 0, escalated: 0, review: 0 });
   const searchInputRef = useRef<HTMLInputElement>(null);
 
   const flaggedCases = useMemo(
@@ -606,6 +613,39 @@ export default function FlaglyApp() {
     );
   };
 
+  const handleSwipeAction = (
+    caseId: string,
+    nextStatus: Exclude<ReviewStatus, "unreviewed">,
+  ) => {
+    const fraudCase = casesWithStatuses.find((c) => c.transaction_id === caseId);
+    if (!fraudCase) return;
+    const action = actionLabels[nextStatus];
+    const auditId = Date.now() + Math.random();
+    const previousStatus = statuses[caseId];
+    setStatuses((prev) => ({ ...prev, [caseId]: nextStatus }));
+    setAuditEntries((prev) => [
+      {
+        id: auditId,
+        time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+        transactionId: caseId,
+        action: action.audit,
+        previousStatus,
+        newStatus: nextStatus,
+        fraudScore: fraudCase.fraud_score,
+        severity: fraudCase.severity,
+        reasons: fraudCase.reasons.slice(0, 3),
+      },
+      ...prev,
+    ]);
+    setLastAction({ caseId, previousStatus, newStatus: nextStatus, auditId, actionLabel: action.audit });
+    setSwipeStats((prev) => ({
+      approved:  prev.approved  + (nextStatus === "approved_legitimate" ? 1 : 0),
+      escalated: prev.escalated + (nextStatus === "escalated_fraud"     ? 1 : 0),
+      review:    prev.review    + (nextStatus === "dismissed_flag"      ? 1 : 0),
+    }));
+    addToast(`${caseId} ${action.toast}.`, nextStatus === "escalated_fraud" ? "warning" : "success");
+  };
+
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       const target = event.target as HTMLElement | null;
@@ -667,6 +707,11 @@ export default function FlaglyApp() {
     (fraudCase) => fraudCase.review_status === "unreviewed",
   ).length;
 
+  const unreviewedCases = useMemo(
+    () => casesWithStatuses.filter((c) => c.review_status === "unreviewed"),
+    [casesWithStatuses],
+  );
+
   return (
     <div className="min-h-screen bg-[#f5f7f8] text-zinc-950">
       {view === "upload" && (
@@ -692,6 +737,10 @@ export default function FlaglyApp() {
             onGoReview={() => setView("review")}
             onGoAudit={() => setView("audit")}
             onGoUpload={() => setView("upload")}
+            onGoSwipe={() => {
+              setSwipeStats({ approved: 0, escalated: 0, review: 0 });
+              setView("swipe");
+            }}
           />
           <div className="flex min-w-0 flex-1 flex-col">
             {view === "dashboard" && (
@@ -769,6 +818,34 @@ export default function FlaglyApp() {
                 onReviewAgain={() => setView("review")}
                 onUndo={handleUndo}
               />
+            )}
+
+            {view === "swipe" && (
+              <main className="w-full">
+                <div className="border-b border-zinc-200 px-5 py-4 sm:px-8">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h1 className="text-lg font-semibold text-zinc-950">Quick Review</h1>
+                      <p className="mt-0.5 text-sm text-zinc-500">
+                        Swipe right to approve, left to escalate, down to defer.
+                      </p>
+                    </div>
+                    <span className="rounded-full border border-zinc-200 bg-white px-3 py-1 text-sm font-semibold text-zinc-600 shadow-sm">
+                      {unreviewedCases.length} remaining
+                    </span>
+                  </div>
+                </div>
+                <FraudSwipeStack
+                  cases={unreviewedCases}
+                  onApprove={(id) => handleSwipeAction(id, "approved_legitimate")}
+                  onFraud={(id) => handleSwipeAction(id, "escalated_fraud")}
+                  onReview={(id) => handleSwipeAction(id, "dismissed_flag")}
+                  onComplete={() => setView("complete")}
+                  totalCasesInQueue={casesWithStatuses.length}
+                  startIndexOffset={reviewedCount}
+                  sessionStats={swipeStats}
+                />
+              </main>
             )}
           </div>
         </div>
@@ -1263,7 +1340,7 @@ function ReviewQueue({
         </div>
       </div>
 
-      <section className="mt-4 rounded-xl border border-zinc-200 bg-white p-4 shadow-sm">
+      <section className="mt-3">
         <SearchFilters
           cases={cases}
           filters={filters}
@@ -1273,17 +1350,17 @@ function ReviewQueue({
           searchTerm={searchTerm}
           setFilters={setFilters}
         />
-        <div className="mt-4 flex flex-col gap-3 border-t border-zinc-200 pt-4 lg:flex-row lg:items-center lg:justify-between">
+        <div className="mt-2 flex flex-wrap items-center justify-between gap-2 px-0.5">
           <KeyboardShortcutHelp />
-          <div className="flex flex-wrap items-center gap-2 text-sm text-zinc-600">
-            <SlidersHorizontal className="h-4 w-4 text-zinc-500" />
+          <div className="flex items-center gap-1.5">
+            <SlidersHorizontal className="h-3.5 w-3.5 text-zinc-400" />
             {(["Conservative", "Balanced", "Aggressive"] as SensitivityMode[]).map(
               (mode) => (
                 <button
-                  className={`min-h-8 rounded-md px-3 text-xs font-semibold transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-950 ${
+                  className={`min-h-7 cursor-pointer rounded px-2.5 text-xs font-medium transition-colors duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-950 ${
                     sensitivity === mode
                       ? "bg-zinc-950 text-white"
-                      : "border border-zinc-200 bg-white text-zinc-700 hover:bg-zinc-50"
+                      : "border border-zinc-200 bg-white text-zinc-600 hover:bg-zinc-50"
                   }`}
                   key={mode}
                   onClick={() => onSensitivityChange(mode)}
@@ -1293,9 +1370,6 @@ function ReviewQueue({
                 </button>
               ),
             )}
-            <span className="basis-full text-xs text-zinc-500 lg:basis-auto">
-              {getSensitivitySummary(sensitivity, cases.length, totalTransactions)}
-            </span>
           </div>
         </div>
       </section>
@@ -1792,16 +1866,23 @@ function SearchFilters({
   searchTerm: string;
   setFilters: Dispatch<SetStateAction<FiltersState>>;
 }) {
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const filterButtonRef = useRef<HTMLButtonElement>(null);
+
   const patterns = unique(cases.flatMap((fraudCase) => fraudCase.detected_patterns));
   const categories = unique(cases.map((fraudCase) => fraudCase.merchant_category));
-  const activeChips = [
-    filters.severity !== "All" ? `Severity: ${filters.severity}` : null,
-    filters.status !== "All" ? `Status: ${statusLabels[filters.status]}` : null,
-    filters.pattern !== "All" ? `Pattern: ${formatPattern(filters.pattern)}` : null,
-    filters.category !== "All" ? `Category: ${titleCase(filters.category)}` : null,
-    filters.channel !== "All" ? `Channel: ${formatChannel(filters.channel)}` : null,
-    searchTerm ? `Search: ${searchTerm}` : null,
-  ].filter(Boolean) as string[];
+
+  const advancedActiveCount = [
+    filters.pattern !== "All",
+    filters.category !== "All",
+    filters.channel !== "All",
+  ].filter(Boolean).length;
+
+  const hasAnyActive =
+    advancedActiveCount > 0 ||
+    filters.severity !== "All" ||
+    filters.status !== "All" ||
+    searchTerm.length > 0;
 
   const updateFilter = <Key extends keyof FiltersState>(
     key: Key,
@@ -1810,99 +1891,167 @@ function SearchFilters({
     setFilters((current) => ({ ...current, [key]: value }));
   };
 
-  return (
-    <section>
-      <div className="flex items-center gap-2">
-        <Filter className="h-4 w-4 text-zinc-500" />
-        <h2 className="text-sm font-semibold text-zinc-950">Find cases</h2>
-      </div>
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      const target = event.target as HTMLElement | null;
+      const isTyping =
+        target?.tagName === "INPUT" ||
+        target?.tagName === "TEXTAREA" ||
+        target?.tagName === "SELECT" ||
+        target?.isContentEditable;
+      if (isTyping) return;
+      if (event.key.toLowerCase() === "f") {
+        event.preventDefault();
+        setFiltersOpen((open) => !open);
+        filterButtonRef.current?.focus();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
 
-      <div className="mt-3 grid gap-3 xl:grid-cols-[minmax(260px,1.2fr)_repeat(5,minmax(130px,1fr))]">
-        <label className="block text-sm font-semibold text-zinc-700">
-          Search
-        <span className="relative mt-2 block">
+  return (
+    <div>
+      {/* Compact single-row toolbar */}
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="relative min-w-48 flex-1">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
           <input
-            className="min-h-11 w-full rounded-md border border-zinc-200 bg-white py-2 pl-9 pr-3 text-sm text-zinc-900 shadow-sm outline-none placeholder:text-zinc-400 focus:border-zinc-950 focus:ring-2 focus:ring-zinc-950/10"
+            className="min-h-9 w-full rounded-md border border-zinc-200 bg-white py-2 pl-9 pr-3 text-sm text-zinc-900 outline-none placeholder:text-zinc-400 focus:border-zinc-950 focus:ring-2 focus:ring-zinc-950/10"
             onChange={(event) => onSearch(event.target.value)}
-            placeholder="Transaction, merchant, card, IP, device"
+            placeholder="Search transactions..."
             ref={searchInputRef}
             type="search"
             value={searchTerm}
           />
-        </span>
-        </label>
-        <SelectControl
-          label="Severity"
-          value={filters.severity}
-          onChange={(value) =>
-            updateFilter("severity", value as FiltersState["severity"])
-          }
-          options={["All", "Critical", "High", "Medium", "Low"]}
-        />
-        <SelectControl
-          label="Review status"
-          value={filters.status}
-          onChange={(value) =>
-            updateFilter("status", value as FiltersState["status"])
-          }
-          options={[
-            "All",
-            "unreviewed",
-            "approved_legitimate",
-            "dismissed_flag",
-            "escalated_fraud",
-          ]}
-          getLabel={(value) =>
-            value === "All" ? "All" : statusLabels[value as ReviewStatus]
-          }
-        />
-        <SelectControl
-          label="Pattern"
-          value={filters.pattern}
-          onChange={(value) => updateFilter("pattern", value)}
-          options={["All", ...patterns]}
-          getLabel={(value) => (value === "All" ? "All" : formatPattern(value))}
-        />
-        <SelectControl
-          label="Merchant category"
-          value={filters.category}
-          onChange={(value) => updateFilter("category", value)}
-          options={["All", ...categories]}
-          getLabel={(value) => (value === "All" ? "All" : titleCase(value))}
-        />
-        <SelectControl
-          label="Channel"
-          value={filters.channel}
-          onChange={(value) =>
-            updateFilter("channel", value as FiltersState["channel"])
-          }
-          options={["All", "online", "in_person", "atm"]}
-          getLabel={(value) => (value === "All" ? "All" : formatChannel(value))}
-        />
-      </div>
+        </div>
 
-      {activeChips.length > 0 && (
-        <div className="mt-3 flex flex-wrap items-center gap-2">
-            {activeChips.map((chip) => (
-              <span
-                className="rounded-full border border-zinc-200 bg-zinc-50 px-3 py-1 text-xs font-semibold text-zinc-700"
-                key={chip}
-              >
-                {chip}
-              </span>
-            ))}
+        <select
+          aria-label="Filter by severity"
+          className="min-h-9 cursor-pointer rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-700 outline-none focus:border-zinc-950 focus:ring-2 focus:ring-zinc-950/10"
+          onChange={(event) =>
+            updateFilter("severity", event.target.value as FiltersState["severity"])
+          }
+          value={filters.severity}
+        >
+          {(["All", "Critical", "High", "Medium", "Low"] as const).map((opt) => (
+            <option key={opt} value={opt}>
+              {opt === "All" ? "Severity" : opt}
+            </option>
+          ))}
+        </select>
+
+        <select
+          aria-label="Filter by status"
+          className="min-h-9 cursor-pointer rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-700 outline-none focus:border-zinc-950 focus:ring-2 focus:ring-zinc-950/10"
+          onChange={(event) =>
+            updateFilter("status", event.target.value as FiltersState["status"])
+          }
+          value={filters.status}
+        >
+          {(["All", "unreviewed", "approved_legitimate", "dismissed_flag", "escalated_fraud"] as const).map(
+            (opt) => (
+              <option key={opt} value={opt}>
+                {opt === "All" ? "Status" : statusLabels[opt]}
+              </option>
+            ),
+          )}
+        </select>
+
+        <button
+          aria-expanded={filtersOpen}
+          className={`inline-flex min-h-9 cursor-pointer items-center gap-1.5 rounded-md border px-3 text-sm font-medium transition-colors duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-950 ${
+            filtersOpen || advancedActiveCount > 0
+              ? "border-zinc-900 bg-zinc-950 text-white"
+              : "border-zinc-200 bg-white text-zinc-700 hover:bg-zinc-50"
+          }`}
+          onClick={() => setFiltersOpen((open) => !open)}
+          ref={filterButtonRef}
+          title="Press F to toggle filters"
+          type="button"
+        >
+          <Filter className="h-3.5 w-3.5" />
+          Filters
+          {advancedActiveCount > 0 && (
+            <span
+              className={`rounded-full px-1.5 py-0.5 text-xs font-semibold ${
+                filtersOpen ? "bg-white/20 text-white" : "bg-zinc-950 text-white"
+              }`}
+            >
+              {advancedActiveCount}
+            </span>
+          )}
+          <ChevronDown
+            className={`h-3.5 w-3.5 transition-transform duration-200 motion-reduce:transition-none ${
+              filtersOpen ? "rotate-180" : ""
+            }`}
+          />
+        </button>
+
+        {hasAnyActive && (
           <button
-            className="inline-flex min-h-8 items-center gap-2 rounded-md border border-zinc-200 bg-white px-3 text-xs font-semibold text-zinc-800 shadow-sm hover:bg-zinc-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-950"
+            className="inline-flex min-h-9 cursor-pointer items-center gap-1.5 rounded-md border border-zinc-200 bg-white px-3 text-sm font-medium text-zinc-600 hover:bg-zinc-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-950"
             onClick={onClearFilters}
             type="button"
           >
-            <X className="h-4 w-4" />
-            Clear filters
+            <X className="h-3.5 w-3.5" />
+            Clear
           </button>
+        )}
+      </div>
+
+      {/* Progressive disclosure: advanced filters panel */}
+      <div
+        className={`grid transition-[grid-template-rows] duration-300 motion-reduce:duration-0 ${
+          filtersOpen ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
+        }`}
+      >
+        <div className="overflow-hidden">
+          <div className="mt-3 grid gap-3 rounded-lg border border-zinc-200 bg-zinc-50/80 p-4 sm:grid-cols-2 lg:grid-cols-3">
+            <SelectControl
+              label="Pattern"
+              value={filters.pattern}
+              onChange={(value) => updateFilter("pattern", value)}
+              options={["All", ...patterns]}
+              getLabel={(value) => (value === "All" ? "All patterns" : formatPattern(value))}
+            />
+            <SelectControl
+              label="Merchant category"
+              value={filters.category}
+              onChange={(value) => updateFilter("category", value)}
+              options={["All", ...categories]}
+              getLabel={(value) => (value === "All" ? "All categories" : titleCase(value))}
+            />
+            <SelectControl
+              label="Channel"
+              value={filters.channel}
+              onChange={(value) =>
+                updateFilter("channel", value as FiltersState["channel"])
+              }
+              options={["All", "online", "in_person", "atm"]}
+              getLabel={(value) => (value === "All" ? "All channels" : formatChannel(value))}
+            />
+            <div className="flex justify-end sm:col-span-2 lg:col-span-3">
+              <button
+                className="inline-flex min-h-9 cursor-pointer items-center gap-2 rounded-md border border-zinc-200 bg-white px-4 text-sm font-medium text-zinc-700 hover:bg-zinc-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-950"
+                onClick={() =>
+                  setFilters((current) => ({
+                    ...current,
+                    pattern: "All",
+                    category: "All",
+                    channel: "All",
+                  }))
+                }
+                type="button"
+              >
+                <RotateCcw className="h-3.5 w-3.5" />
+                Reset advanced filters
+              </button>
+            </div>
+          </div>
         </div>
-      )}
-    </section>
+      </div>
+    </div>
   );
 }
 
@@ -2535,6 +2684,7 @@ function Sidebar({
   onGoAudit,
   onGoDashboard,
   onGoReview,
+  onGoSwipe,
   onGoUpload,
   unreviewedCount,
   view,
@@ -2542,6 +2692,7 @@ function Sidebar({
   onGoAudit: () => void;
   onGoDashboard: () => void;
   onGoReview: () => void;
+  onGoSwipe: () => void;
   onGoUpload: () => void;
   unreviewedCount: number;
   view: View;
@@ -2571,6 +2722,13 @@ function Sidebar({
           icon={ShieldAlert}
           label="Review Issues"
           onClick={onGoReview}
+        />
+        <NavItem
+          active={view === "swipe"}
+          badge={unreviewedCount}
+          icon={Zap}
+          label="Quick Review"
+          onClick={onGoSwipe}
         />
         <NavItem
           active={view === "audit"}
