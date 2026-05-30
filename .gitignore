@@ -1,3 +1,14 @@
+# Dependencies
+node_modules/
+
+# Next.js build output
+.next/
+out/
+
+# TypeScript
+*.tsbuildinfo
+next-env.d.ts
+
 # OS
 .DS_Store
 Thumbs.db
