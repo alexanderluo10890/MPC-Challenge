@@ -663,6 +663,10 @@ export default function FlaglyApp() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   });
 
+  const unreviewedCount = casesWithStatuses.filter(
+    (fraudCase) => fraudCase.review_status === "unreviewed",
+  ).length;
+
   return (
     <div className="min-h-screen bg-[#f5f7f8] text-zinc-950">
       {view === "upload" && (
@@ -679,81 +683,95 @@ export default function FlaglyApp() {
         />
       )}
 
-      {view === "dashboard" && (
-        <Dashboard
-          auditEntries={auditEntries}
-          cases={casesWithStatuses}
-          datasetSummary={datasetSummary}
-          escalatedCount={escalatedCount}
-          allScoredCases={allScoredCases}
-          onExport={handleExport}
-          onOpenAudit={() => setView("audit")}
-          onOpenReview={() => setView("review")}
-          projectedFlaggedCount={projectedFlaggedCount}
-          reviewedCount={reviewedCount}
-          reviewProgress={reviewProgress}
-          sensitivity={sensitivity}
-          onSensitivityChange={handleSensitivityChange}
-          totalTransactions={datasetSummary.totalTransactions}
-        />
-      )}
+      {view !== "upload" && (
+        <div className="flex min-h-screen">
+          <Sidebar
+            view={view}
+            unreviewedCount={unreviewedCount}
+            onGoDashboard={() => setView("dashboard")}
+            onGoReview={() => setView("review")}
+            onGoAudit={() => setView("audit")}
+            onGoUpload={() => setView("upload")}
+          />
+          <div className="flex min-w-0 flex-1 flex-col">
+            {view === "dashboard" && (
+              <Dashboard
+                auditEntries={auditEntries}
+                cases={casesWithStatuses}
+                datasetSummary={datasetSummary}
+                escalatedCount={escalatedCount}
+                allScoredCases={allScoredCases}
+                onExport={handleExport}
+                onOpenAudit={() => setView("audit")}
+                onOpenReview={() => setView("review")}
+                projectedFlaggedCount={projectedFlaggedCount}
+                reviewedCount={reviewedCount}
+                reviewProgress={reviewProgress}
+                sensitivity={sensitivity}
+                onSensitivityChange={handleSensitivityChange}
+                totalTransactions={datasetSummary.totalTransactions}
+              />
+            )}
 
-      {view === "review" && (
-        <ReviewQueue
-          activeIndex={safeActiveIndex}
-          activeTab={activeTab}
-          cases={casesWithStatuses}
-          currentCase={currentCase}
-          filteredCases={filteredCases}
-          filters={filters}
-          lastAction={lastAction}
-          onAction={handleReviewAction}
-          onClearFilters={() => {
-            setFilters(defaultFilters);
-            setSearchTerm("");
-          }}
-          onExport={handleExport}
-          onGoAudit={() => setView("audit")}
-          onGoDashboard={() => setView("dashboard")}
-          onNext={goNext}
-          onPrevious={goPrevious}
-          onSearch={(value) => {
-            setActiveIndex(0);
-            setSearchTerm(value);
-          }}
-          onSensitivityChange={handleSensitivityChange}
-          onTabChange={setActiveTab}
-          onUndo={handleUndo}
-          reviewProgress={reviewProgress}
-          reviewedCount={reviewedCount}
-          searchInputRef={searchInputRef}
-          searchTerm={searchTerm}
-          sensitivity={sensitivity}
-          setFilters={(nextFilters) => {
-            setActiveIndex(0);
-            setFilters(nextFilters);
-          }}
-          totalTransactions={datasetSummary.totalTransactions}
-        />
-      )}
+            {view === "review" && (
+              <ReviewQueue
+                activeIndex={safeActiveIndex}
+                activeTab={activeTab}
+                cases={casesWithStatuses}
+                currentCase={currentCase}
+                filteredCases={filteredCases}
+                filters={filters}
+                lastAction={lastAction}
+                onAction={handleReviewAction}
+                onClearFilters={() => {
+                  setFilters(defaultFilters);
+                  setSearchTerm("");
+                }}
+                onExport={handleExport}
+                onGoAudit={() => setView("audit")}
+                onGoDashboard={() => setView("dashboard")}
+                onNext={goNext}
+                onPrevious={goPrevious}
+                onSearch={(value) => {
+                  setActiveIndex(0);
+                  setSearchTerm(value);
+                }}
+                onSensitivityChange={handleSensitivityChange}
+                onTabChange={setActiveTab}
+                onUndo={handleUndo}
+                reviewProgress={reviewProgress}
+                reviewedCount={reviewedCount}
+                searchInputRef={searchInputRef}
+                searchTerm={searchTerm}
+                sensitivity={sensitivity}
+                setFilters={(nextFilters) => {
+                  setActiveIndex(0);
+                  setFilters(nextFilters);
+                }}
+                totalTransactions={datasetSummary.totalTransactions}
+              />
+            )}
 
-      {view === "audit" && (
-        <AuditLog
-          entries={auditEntries}
-          onBackToReview={() => setView("review")}
-          onExport={handleExport}
-          onGoDashboard={() => setView("dashboard")}
-        />
-      )}
+            {view === "audit" && (
+              <AuditLog
+                entries={auditEntries}
+                onBackToReview={() => setView("review")}
+                onExport={handleExport}
+                onGoDashboard={() => setView("dashboard")}
+              />
+            )}
 
-      {view === "complete" && (
-        <CompletionState
-          auditEntries={auditEntries}
-          onExport={handleExport}
-          onGoAudit={() => setView("audit")}
-          onReviewAgain={() => setView("review")}
-          onUndo={handleUndo}
-        />
+            {view === "complete" && (
+              <CompletionState
+                auditEntries={auditEntries}
+                onExport={handleExport}
+                onGoAudit={() => setView("audit")}
+                onReviewAgain={() => setView("review")}
+                onUndo={handleUndo}
+              />
+            )}
+          </div>
+        </div>
       )}
 
       <Toast messages={toasts} />
@@ -1007,6 +1025,7 @@ function Dashboard({
             </button>
           </div>
         }
+        hideBrand
         mode="Dashboard overview"
       />
 
@@ -1215,6 +1234,7 @@ function ReviewQueue({
             <ExportButton onExport={onExport} />
           </div>
         }
+        hideBrand
         mode="Review Queue"
       />
 
@@ -1973,6 +1993,7 @@ function AuditLog({
             </button>
           </div>
         }
+        hideBrand
         mode="Audit log"
       />
 
@@ -2472,15 +2493,17 @@ function Toast({ messages }: { messages: ToastMessage[] }) {
 
 function AppHeader({
   action,
+  hideBrand = false,
   mode,
 }: {
   action?: ReactNode;
+  hideBrand?: boolean;
   mode: string;
 }) {
   return (
     <header className="flex flex-col gap-4 border-b border-zinc-200 pb-4 lg:flex-row lg:items-center lg:justify-between">
       <div className="flex flex-wrap items-center gap-3">
-        <BrandMark />
+        {!hideBrand && <BrandMark />}
         <span className="rounded-full border border-zinc-200 bg-white px-3 py-1 text-sm font-semibold text-zinc-600 shadow-sm">
           {mode}
         </span>
@@ -2505,6 +2528,105 @@ function BrandMark() {
         </div>
       </div>
     </div>
+  );
+}
+
+function Sidebar({
+  onGoAudit,
+  onGoDashboard,
+  onGoReview,
+  onGoUpload,
+  unreviewedCount,
+  view,
+}: {
+  onGoAudit: () => void;
+  onGoDashboard: () => void;
+  onGoReview: () => void;
+  onGoUpload: () => void;
+  unreviewedCount: number;
+  view: View;
+}) {
+  return (
+    <aside className="sticky top-0 flex h-screen w-56 shrink-0 flex-col border-r border-zinc-200 bg-white">
+      <div className="flex items-center gap-2.5 border-b border-zinc-200 px-4 py-4">
+        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-zinc-950 text-white">
+          <ShieldAlert className="h-4 w-4" />
+        </div>
+        <div>
+          <div className="text-sm font-semibold text-zinc-950">Flagly</div>
+          <div className="text-xs text-zinc-500">Fraud review</div>
+        </div>
+      </div>
+
+      <nav aria-label="Main navigation" className="flex flex-1 flex-col gap-1 px-3 py-4">
+        <NavItem
+          active={view === "dashboard"}
+          icon={BarChart3}
+          label="Overview"
+          onClick={onGoDashboard}
+        />
+        <NavItem
+          active={view === "review" || view === "complete"}
+          badge={unreviewedCount}
+          icon={ShieldAlert}
+          label="Review Issues"
+          onClick={onGoReview}
+        />
+        <NavItem
+          active={view === "audit"}
+          icon={History}
+          label="Audit Log"
+          onClick={onGoAudit}
+        />
+      </nav>
+
+      <div className="border-t border-zinc-200 px-3 py-3">
+        <NavItem
+          icon={Upload}
+          label="Upload New CSV"
+          onClick={onGoUpload}
+        />
+      </div>
+    </aside>
+  );
+}
+
+function NavItem({
+  active = false,
+  badge,
+  icon: Icon,
+  label,
+  onClick,
+}: {
+  active?: boolean;
+  badge?: number;
+  icon: ComponentType<{ className?: string }>;
+  label: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      aria-current={active ? "page" : undefined}
+      className={`flex w-full cursor-pointer items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-950 ${
+        active
+          ? "bg-zinc-950 text-white"
+          : "text-zinc-700 hover:bg-zinc-100 hover:text-zinc-950"
+      }`}
+      onClick={onClick}
+      type="button"
+    >
+      <Icon className="h-4 w-4 shrink-0" />
+      <span className="flex-1 text-left">{label}</span>
+      {badge != null && badge > 0 && (
+        <span
+          className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
+            active ? "bg-white/20 text-white" : "bg-zinc-100 text-zinc-600"
+          }`}
+        >
+          {badge}
+        </span>
+      )}
+    </button>
   );
 }
 
