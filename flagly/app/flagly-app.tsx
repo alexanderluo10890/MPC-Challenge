@@ -1099,6 +1099,21 @@ function Dashboard({
       fraudCase.severity === "High" || fraudCase.severity === "Critical",
   ).length;
 
+  const categoryColors = ["#0ea5e9","#8b5cf6","#f59e0b","#10b981","#ef4444","#06b6d4","#f97316"];
+  const categoryData = Object.entries(countBy(allScoredCases, "merchant_category"))
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 7)
+    .map(([label, value], i) => ({
+      label: titleCase(label),
+      value,
+      color: categoryColors[i % categoryColors.length]!,
+    }));
+
+  const fraudData = [
+    { label: "Flagged", value: projectedFlaggedCount, color: "#ef4444" },
+    { label: "Clean", value: Math.max(0, totalTransactions - projectedFlaggedCount), color: "#10b981" },
+  ];
+
   return (
     <main className="mx-auto min-h-screen w-full max-w-7xl px-5 py-6 sm:px-8">
       <AppHeader
@@ -1173,6 +1188,19 @@ function Dashboard({
           icon={Gauge}
           label="Progress"
           value={`${reviewProgress}%`}
+        />
+      </section>
+
+      <section className="mt-5 grid gap-5 lg:grid-cols-2">
+        <PieChart
+          data={categoryData}
+          title="Transaction categories"
+          subtitle="Merchant category breakdown across all uploaded transactions."
+        />
+        <PieChart
+          data={fraudData}
+          title="Fraud vs clean"
+          subtitle={`${projectedFlaggedCount} flagged out of ${number.format(totalTransactions)} transactions at ${sensitivity} sensitivity.`}
         />
       </section>
 
@@ -2943,4 +2971,116 @@ function relatedGroup(reason: string) {
     return "Same time window";
   }
   return "Similar pattern";
+}
+
+function polarToCartesian(cx: number, cy: number, r: number, angleDeg: number) {
+  const rad = (angleDeg * Math.PI) / 180;
+  return { x: cx + r * Math.cos(rad), y: cy + r * Math.sin(rad) };
+}
+
+function donutSlicePath(
+  cx: number,
+  cy: number,
+  outerR: number,
+  innerR: number,
+  startAngle: number,
+  endAngle: number,
+) {
+  const end = Math.min(endAngle, startAngle + 359.99);
+  const o1 = polarToCartesian(cx, cy, outerR, startAngle);
+  const o2 = polarToCartesian(cx, cy, outerR, end);
+  const i1 = polarToCartesian(cx, cy, innerR, end);
+  const i2 = polarToCartesian(cx, cy, innerR, startAngle);
+  const large = end - startAngle > 180 ? 1 : 0;
+  return [
+    `M ${o1.x.toFixed(2)} ${o1.y.toFixed(2)}`,
+    `A ${outerR} ${outerR} 0 ${large} 1 ${o2.x.toFixed(2)} ${o2.y.toFixed(2)}`,
+    `L ${i1.x.toFixed(2)} ${i1.y.toFixed(2)}`,
+    `A ${innerR} ${innerR} 0 ${large} 0 ${i2.x.toFixed(2)} ${i2.y.toFixed(2)}`,
+    "Z",
+  ].join(" ");
+}
+
+function PieChart({
+  data,
+  subtitle,
+  title,
+}: {
+  data: { color: string; label: string; value: number }[];
+  subtitle?: string;
+  title: string;
+}) {
+  const total = data.reduce((sum, d) => sum + d.value, 0);
+  const cx = 80;
+  const cy = 80;
+  const outerR = 68;
+  const innerR = 40;
+  let cumAngle = -90;
+
+  return (
+    <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm">
+      <h2 className="text-lg font-semibold text-zinc-950">{title}</h2>
+      {subtitle && (
+        <p className="mt-1 text-sm text-zinc-500">{subtitle}</p>
+      )}
+
+      {total === 0 ? (
+        <div className="mt-5 flex h-32 items-center justify-center rounded-lg bg-zinc-50 text-sm text-zinc-400">
+          No data yet — upload a CSV to see this chart.
+        </div>
+      ) : (
+        <div className="mt-5 flex flex-col items-center gap-6 sm:flex-row">
+          <svg className="shrink-0" height={160} viewBox="0 0 160 160" width={160}>
+            {data.map((segment) => {
+              const angle = (segment.value / total) * 360;
+              const path = donutSlicePath(cx, cy, outerR, innerR, cumAngle, cumAngle + angle);
+              cumAngle += angle;
+              return <path d={path} fill={segment.color} key={segment.label} />;
+            })}
+            <text
+              dominantBaseline="middle"
+              fill="#09090b"
+              fontSize={20}
+              fontWeight={600}
+              textAnchor="middle"
+              x={cx}
+              y={cy - 7}
+            >
+              {total.toLocaleString()}
+            </text>
+            <text
+              dominantBaseline="middle"
+              fill="#71717a"
+              fontSize={11}
+              textAnchor="middle"
+              x={cx}
+              y={cy + 12}
+            >
+              total
+            </text>
+          </svg>
+
+          <div className="flex flex-1 flex-col gap-2.5">
+            {data.map((segment) => (
+              <div className="flex items-center gap-2" key={segment.label}>
+                <span
+                  className="h-2.5 w-2.5 shrink-0 rounded-full"
+                  style={{ backgroundColor: segment.color }}
+                />
+                <span className="flex-1 truncate text-sm text-zinc-600">
+                  {segment.label}
+                </span>
+                <span className="text-sm font-semibold text-zinc-950">
+                  {Math.round((segment.value / total) * 100)}%
+                </span>
+                <span className="w-10 text-right text-sm text-zinc-400">
+                  {segment.value.toLocaleString()}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
 }
