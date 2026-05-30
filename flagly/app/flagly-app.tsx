@@ -47,7 +47,6 @@ import {
   type FraudCase,
   type ReviewStatus,
   type Severity,
-  type TransactionCsvRow,
   csvInputFields,
   processingSteps,
 } from "./mock-data";
@@ -55,6 +54,7 @@ import {
   buildMockFraudCases,
   getFlaggedCases,
   parseTransactionsCsv,
+  type ScoredTransactionCsvRow,
 } from "./csv-analysis";
 import {
   FraudSwipeStack,
@@ -288,7 +288,7 @@ function createStatusMap(cases: FraudCase[]) {
 }
 
 function getDatasetSummary(
-  rows: TransactionCsvRow[],
+  rows: ScoredTransactionCsvRow[],
   cases: FraudCase[],
   fileName: string,
 ): DatasetSummary {
@@ -318,7 +318,8 @@ export default function FlaglyApp() {
   const [view, setView] = useState<View>("upload");
   const [processing, setProcessing] = useState(false);
   const [processingStep, setProcessingStep] = useState(0);
-  const [sourceRows, setSourceRows] = useState<TransactionCsvRow[]>([]);
+  const [sourceRows, setSourceRows] = useState<ScoredTransactionCsvRow[]>([]);
+  const [isPythonScored, setIsPythonScored] = useState(false);
   const [allScoredCases, setAllScoredCases] = useState<FraudCase[]>([]);
   const [datasetSummary, setDatasetSummary] = useState<DatasetSummary>({
     fileName: "No file loaded",
@@ -401,6 +402,7 @@ export default function FlaglyApp() {
       const text = await file.text();
       const parsed = parseTransactionsCsv(text);
       setSourceRows(parsed.rows);
+      setIsPythonScored(parsed.isScored);
       setSelectedFileName(file.name);
       setUploadWarnings(parsed.warnings);
       setUploadError(null);
@@ -417,7 +419,12 @@ export default function FlaglyApp() {
       setFilters(defaultFilters);
       setSearchTerm("");
       setActiveIndex(0);
-      addToast(`${file.name} loaded with ${parsed.rows.length} valid transactions.`, "success");
+      addToast(
+        parsed.isScored
+          ? `${file.name} loaded — Python fraud scores detected (${parsed.rows.length} transactions).`
+          : `${file.name} loaded with ${parsed.rows.length} valid transactions.`,
+        "success",
+      );
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unable to parse CSV.";
       setUploadError(message);
@@ -717,6 +724,7 @@ export default function FlaglyApp() {
       {view === "upload" && (
         <UploadScreen
           datasetSummary={datasetSummary}
+          isPythonScored={isPythonScored}
           onFileSelected={handleFileSelected}
           onProcess={handleProcessTransactions}
           processing={processing}
@@ -858,6 +866,7 @@ export default function FlaglyApp() {
 
 function UploadScreen({
   datasetSummary,
+  isPythonScored,
   onFileSelected,
   onProcess,
   processing,
@@ -868,12 +877,13 @@ function UploadScreen({
   uploadWarnings,
 }: {
   datasetSummary: DatasetSummary;
+  isPythonScored: boolean;
   onFileSelected: (file: File | null) => void;
   onProcess: () => void;
   processing: boolean;
   processingStep: number;
   selectedFileName: string;
-  sourceRows: TransactionCsvRow[];
+  sourceRows: ScoredTransactionCsvRow[];
   uploadError: string | null;
   uploadWarnings: string[];
 }) {
@@ -947,8 +957,9 @@ function UploadScreen({
               Upload a transactions CSV
             </h2>
             <p className="mt-2 text-sm leading-6 text-zinc-600">
-              Supports comma-separated CSV and tab-separated exports with the
-              same columns.
+              Upload a raw <span className="font-semibold">transactions.csv</span> (11 columns)
+              or the pre-scored output from{" "}
+              <span className="font-mono font-semibold">fraud_detector.py</span> to use your Python scores directly.
             </p>
             <input
               accept=".csv,.tsv,text/csv,text/tab-separated-values"
@@ -987,8 +998,10 @@ function UploadScreen({
                 from {selectedFileName}.
               </div>
               <div className="mt-2 text-sm text-emerald-800">
-                {number.format(loadedCards)} cards found. Mock filtering will
-                score each row and send only selected transactions to review.
+                {number.format(loadedCards)} cards found.{" "}
+                {isPythonScored
+                  ? "Python fraud scores detected — scores from fraud_detector.py will be used directly."
+                  : "Mock scoring will be applied and flagged transactions sent to review."}
               </div>
             </div>
           )}

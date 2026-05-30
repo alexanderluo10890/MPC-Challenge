@@ -8,9 +8,30 @@ import {
 } from "./mock-data";
 
 export type CsvParseResult = {
-  rows: TransactionCsvRow[];
+  rows: ScoredTransactionCsvRow[];
   warnings: string[];
+  /** True when the CSV contains a risk_score column — i.e. it was produced by fraud_detector.py */
+  isScored: boolean;
 };
+
+/**
+ * Extra columns emitted by fraud_detector.py.
+ * All fields are optional so this type also describes a plain raw CSV row.
+ */
+type PythonScoredFields = {
+  risk_score?: number;
+  risk_level?: string;
+  flag_status?: string;
+  fraud_reasons?: string;
+  fraud_pattern?: string;
+  card_median_amount?: number;
+  amount_ratio_to_median?: number;
+  device_count_for_card?: number;
+  ip_count_for_card?: number;
+};
+
+/** A TransactionCsvRow optionally enriched with Python-computed fraud scores. */
+export type ScoredTransactionCsvRow = TransactionCsvRow & PythonScoredFields;
 
 type RawCsvValue = string | number | boolean | null | undefined;
 
@@ -34,6 +55,19 @@ const highRiskCategories = [
   "online_retail",
   "travel",
 ];
+
+/** Python fraud_pattern values → frontend pattern keys */
+const pythonPatternMap: Record<string, string[]> = {
+  "Shared Device/IP Attack": ["cross_card_ip_reuse", "account_takeover"],
+  "Card Testing":            ["card_testing", "amount_anomaly"],
+  "Gift Card Burst":         ["gift_card_cashout"],
+  "Merchant Burst":          ["merchant_burst"],
+  "Amount Outlier":          ["amount_anomaly"],
+  "Foreign Online Purchase": ["foreign_high_value"],
+  "High-Risk Anomaly":       ["account_takeover", "amount_anomaly"],
+};
+
+// ─── CSV Parsing ──────────────────────────────────────────────────────────────
 
 export function parseTransactionsCsv(text: string): CsvParseResult {
   const parsed = Papa.parse<string[]>(text.trim(), {
@@ -61,7 +95,10 @@ export function parseTransactionsCsv(text: string): CsvParseResult {
     throw new Error(`Missing required column: ${missingFields[0]}`);
   }
 
-  const rows: TransactionCsvRow[] = [];
+  // Detect whether this is a pre-scored CSV from fraud_detector.py
+  const isScored = headers.includes("risk_score");
+
+  const rows: ScoredTransactionCsvRow[] = [];
   const warnings: string[] = [];
 
   rawRows.slice(1).forEach((rawRow, rowIndex) => {
@@ -90,7 +127,7 @@ export function parseTransactionsCsv(text: string): CsvParseResult {
       return;
     }
 
-    rows.push({
+    const row: ScoredTransactionCsvRow = {
       transaction_id: transactionId,
       timestamp: record.timestamp,
       card_id: record.card_id,
@@ -102,36 +139,110 @@ export function parseTransactionsCsv(text: string): CsvParseResult {
       merchant_country: record.merchant_country,
       device_id: record.device_id || undefined,
       ip_address: record.ip_address || undefined,
-    });
+    };
+
+    // When the CSV is pre-scored, read the Python-computed columns
+    if (isScored) {
+      const rs = Number(record.risk_score);
+      if (Number.isFinite(rs)) {
+        row.risk_score   = rs;
+        row.risk_level   = record.risk_level   || undefined;
+        row.flag_status  = record.flag_status  || undefined;
+        row.fraud_reasons = record.fraud_reasons || undefined;
+        row.fraud_pattern = record.fraud_pattern || undefined;
+
+        const cardMedian = Number(record.card_median_amount);
+        if (Number.isFinite(cardMedian) && cardMedian > 0) {
+          row.card_median_amount = cardMedian;
+        }
+        const amtRatio = Number(record.amount_ratio_to_median);
+        if (Number.isFinite(amtRatio)) {
+          row.amount_ratio_to_median = amtRatio;
+        }
+        const devCnt = Number(record.device_count_for_card);
+        if (Number.isFinite(devCnt)) {
+          row.device_count_for_card = devCnt;
+        }
+        const ipCnt = Number(record.ip_count_for_card);
+        if (Number.isFinite(ipCnt)) {
+          row.ip_count_for_card = ipCnt;
+        }
+      }
+    }
+
+    rows.push(row);
   });
 
   if (rows.length === 0) {
     throw new Error("No valid transactions found in the upload.");
   }
 
-  return { rows, warnings };
+  return { rows, warnings, isScored };
 }
 
-export function buildMockFraudCases(rows: TransactionCsvRow[]): FraudCase[] {
+// ─── Fraud Case Building ──────────────────────────────────────────────────────
+
+export function buildMockFraudCases(rows: ScoredTransactionCsvRow[]): FraudCase[] {
   const context = buildScoringContext(rows);
 
+  // Use Python scores when at least one row has risk_score populated
+  const hasScores = rows.some((row) => row.risk_score !== undefined);
+
   return rows.map((row) => {
-    const baseline = buildBaseline(row, context.byCard.get(row.card_id) ?? [row]);
-    const score = scoreTransaction(row, baseline, context);
-    const detectedPatterns = detectPatterns(row, baseline, context);
+    const cardRows = context.byCard.get(row.card_id) ?? [row];
+    const baseline = buildBaseline(row, cardRows);
+
+    if (hasScores && row.risk_score !== undefined) {
+      // ── Fast path: trust the Python fraud scorer ─────────────────────────
+      const score    = row.risk_score;
+      const severity = isValidSeverity(row.risk_level) ? row.risk_level : severityFromScore(score);
+      const reasons  = row.fraud_reasons
+        ? row.fraud_reasons.split("; ").filter(Boolean).slice(0, 5)
+        : buildReasons(row, baseline, context, []);
+      const patterns = row.fraud_pattern
+        ? (pythonPatternMap[row.fraud_pattern] ?? ["amount_anomaly"])
+        : detectPatterns(row, baseline, context);
+
+      const enrichedBaseline = {
+        ...baseline,
+        median_amount:       row.card_median_amount ?? baseline.median_amount,
+        amount_ratio:        row.amount_ratio_to_median !== undefined
+          ? Number(row.amount_ratio_to_median.toFixed(1))
+          : baseline.amount_ratio,
+        known_devices_count: row.device_count_for_card ?? baseline.known_devices_count,
+        known_ips_count:     row.ip_count_for_card     ?? baseline.known_ips_count,
+      };
+
+      return {
+        ...row,
+        fraud_score:        score,
+        severity,
+        flagged:            score >= 45,
+        review_status:      "unreviewed" as const,
+        reasons,
+        detected_patterns:  patterns,
+        baseline:           enrichedBaseline,
+        related_activity:   buildRelatedActivity(row, context),
+        timeline:           buildTimeline(row, enrichedBaseline, context, patterns, score),
+      };
+    }
+
+    // ── Original client-side scoring path (raw CSV) ───────────────────────
+    const score    = scoreTransaction(row, baseline, context);
+    const patterns = detectPatterns(row, baseline, context);
     const severity = severityFromScore(score);
 
     return {
       ...row,
-      fraud_score: score,
+      fraud_score:       score,
       severity,
-      flagged: score >= 45,
-      review_status: "unreviewed",
-      reasons: buildReasons(row, baseline, context, detectedPatterns),
-      detected_patterns: detectedPatterns,
+      flagged:           score >= 45,
+      review_status:     "unreviewed" as const,
+      reasons:           buildReasons(row, baseline, context, patterns),
+      detected_patterns: patterns,
       baseline,
-      related_activity: buildRelatedActivity(row, context),
-      timeline: buildTimeline(row, baseline, context, detectedPatterns, score),
+      related_activity:  buildRelatedActivity(row, context),
+      timeline:          buildTimeline(row, baseline, context, patterns, score),
     };
   });
 }
@@ -160,11 +271,17 @@ export function getFlaggedCases(cases: FraudCase[], mode: string) {
   return highestScore ? [{ ...highestScore, flagged: true }] : [];
 }
 
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+function isValidSeverity(value: string | undefined): value is Severity {
+  return value === "Low" || value === "Medium" || value === "High" || value === "Critical";
+}
+
 function normalizeHeaders(headerRow: RawCsvValue[]) {
   const normalized = headerRow.map((header) =>
     String(header ?? "")
       .trim()
-      .replace(/^\uFEFF/, "")
+      .replace(/^﻿/, "")
       .toLowerCase(),
   );
 
