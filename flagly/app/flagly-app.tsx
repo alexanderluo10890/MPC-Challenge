@@ -64,6 +64,20 @@ import {
   type SwipeSessionStats,
 } from "@/components/ui/fraud-swipe-stack";
 import { GooeyText } from "@/components/ui/gooey-text-morphing";
+import { AnimatedBackground } from "@/components/ui/animated-background";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import {
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+  type ChartConfig,
+} from "@/components/ui/pie-chart";
+import {
+  LabelList,
+  Pie,
+  PieChart as RechartsPieChart,
+} from "recharts";
+import { AuraBackground } from "@/components/ui/aura-background";
 import { GridScan } from "@/components/ui/GridScan";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 
@@ -1112,10 +1126,13 @@ export default function FraudFrogApp() {
               {view === "complete" && (
                 <CompletionState
                   auditEntries={auditEntries}
+                  casesWithStatuses={casesWithStatuses}
+                  datasetSummary={datasetSummary}
                   onExport={handleExport}
                   onGoAudit={() => setView("audit")}
                   onReviewAgain={() => setView("review")}
                   onUndo={handleUndo}
+                  totalTransactions={datasetSummary.totalTransactions}
                 />
               )}
 
@@ -1191,22 +1208,9 @@ function UploadScreen({
   };
 
   return (
-    <main className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden bg-zinc-950 px-5 py-16">
-      {/* ── GridScan animated background ────────────────────────────── */}
-      <div className="absolute inset-0 z-0">
-        <GridScan
-          sensitivity={0.55}
-          lineThickness={1}
-          linesColor="#bfb7ce"
-          gridScale={0.11}
-          scanColor="#9bff00"
-          scanOpacity={0.4}
-          enablePost
-          bloomIntensity={0.6}
-          chromaticAberration={0.002}
-          noiseIntensity={0.01}
-        />
-      </div>
+    <main className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden bg-black text-white px-5 py-16">
+      {/* ── Aura animated background ───────────────────────────────── */}
+      <AuraBackground />
 
       {/* ── HERO: centered title + description ──────────────────────── */}
       <div className="relative z-10 w-full max-w-xl text-center">
@@ -1217,7 +1221,7 @@ function UploadScreen({
 
         <h1 className="mt-14">
           <GooeyText
-            texts={["FraudFrog", "Detect Fraud", "Flag Threats", "Protect the Pool", "FraudFrog"]}
+            texts={["Fraud Frog", "Detect Fraud", "Flag Threats", "Protect the Pool"]}
             morphTime={1.2}
             cooldownTime={2.5}
             className="h-20"
@@ -1225,7 +1229,7 @@ function UploadScreen({
           />
         </h1>
 
-        <p className="mt-5 text-lg leading-7 text-zinc-400">
+        <p className="mt-5 text-lg leading-7 text-gray-400">
           Upload a transactions CSV to detect suspicious cases. FraudFrog scores
           each transaction and presents flagged cases one by one for your team
           to approve, escalate, or defer.
@@ -1235,14 +1239,26 @@ function UploadScreen({
       {/* ── UPLOAD ZONE ─────────────────────────────────────────────── */}
       <div className="relative z-10 mt-10 w-full max-w-xl">
         <div
-          className="rounded-2xl border-2 border-dashed border-zinc-700 bg-zinc-900/70 p-10 text-center backdrop-blur-sm transition-colors duration-200 hover:border-zinc-500"
+          className="relative overflow-hidden rounded-3xl border border-white/10 bg-[#0A0A0C] p-10 text-center shadow-2xl backdrop-blur-sm transition-colors duration-200 hover:border-white/20"
           onDragOver={(event) => event.preventDefault()}
           onDrop={handleDrop}
         >
-          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-zinc-800">
-            <Upload className="h-8 w-8 text-zinc-400" />
+          {/* Radial gradient overlay */}
+          <div className="pointer-events-none absolute inset-0 rounded-3xl bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-[#1a1a2e] via-[#0A0A0C] to-[#0A0A0C]" />
+          {/* Dot texture */}
+          <div
+            className="pointer-events-none absolute inset-0 rounded-3xl opacity-20"
+            style={{
+              backgroundImage: "radial-gradient(white 1px, transparent 1px)",
+              backgroundSize: "40px 40px",
+              maskImage: "radial-gradient(circle, black 40%, transparent 100%)",
+              WebkitMaskImage: "radial-gradient(circle, black 40%, transparent 100%)",
+            }}
+          />
+          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl border border-white/10 bg-white/5">
+            <Upload className="h-8 w-8 text-blue-400" />
           </div>
-          <p className="mt-4 text-sm font-medium text-zinc-500">
+          <p className="mt-4 text-sm font-medium text-gray-500">
             Drag and drop your file here, or
           </p>
           <input
@@ -1253,17 +1269,17 @@ function UploadScreen({
             type="file"
           />
           <button
-            className="mx-auto mt-4 flex min-h-12 w-full items-center justify-between rounded-xl border border-zinc-700 bg-zinc-800/80 px-4 py-3 text-left transition-colors duration-200 hover:bg-zinc-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-500"
+            className="mx-auto mt-4 flex min-h-12 w-full items-center justify-between rounded-xl border border-blue-500/40 bg-black/60 px-4 py-3 text-left transition-all duration-200 shadow-[0_0_20px_rgba(59,130,246,0.15),inset_0_0_10px_rgba(59,130,246,0.05)] hover:bg-blue-500/10 hover:border-blue-400/60 hover:shadow-[0_0_35px_rgba(59,130,246,0.25),inset_0_0_20px_rgba(59,130,246,0.1)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500"
             onClick={() => fileInputRef.current?.click()}
             type="button"
           >
             <div className="flex items-center gap-3">
-              <FileText className="h-5 w-5 text-zinc-400" />
-              <span className="text-sm font-semibold text-zinc-200">
+              <FileText className="h-5 w-5 text-gray-400" />
+              <span className="text-sm font-semibold text-gray-200">
                 {selectedFileName || "Upload .csv transactions file"}
               </span>
             </div>
-            <span className={`text-xs font-bold ${sourceRows.length > 0 ? "text-emerald-400" : "text-zinc-500"}`}>
+            <span className={`text-xs font-bold ${sourceRows.length > 0 ? "text-emerald-400" : "text-gray-500"}`}>
               {sourceRows.length > 0 ? "Loaded" : "Browse"}
             </span>
           </button>
@@ -1313,7 +1329,7 @@ function UploadScreen({
 
         {/* Process CTA */}
         <button
-          className="mt-5 flex min-h-12 w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-emerald-500 px-5 py-3.5 text-base font-semibold text-zinc-950 shadow-sm transition-colors duration-200 hover:bg-emerald-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-400 disabled:cursor-not-allowed disabled:bg-zinc-700 disabled:text-zinc-500"
+          className="mt-5 flex min-h-12 w-full cursor-pointer items-center justify-center gap-2 rounded-full bg-white px-5 py-3.5 text-base font-semibold text-black shadow-sm transition-colors duration-200 hover:bg-gray-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-400 disabled:cursor-not-allowed disabled:bg-white/10 disabled:text-white/30"
           disabled={processing || sourceRows.length === 0}
           onClick={onProcess}
           type="button"
@@ -1327,14 +1343,14 @@ function UploadScreen({
         </button>
 
         {/* Expected columns */}
-        <details className="mt-5 rounded-xl border border-zinc-800 bg-zinc-900/50 px-4 py-3">
-          <summary className="cursor-pointer text-sm font-medium text-zinc-600 hover:text-zinc-400">
+        <details className="mt-5 rounded-xl border border-white/10 bg-white/5 px-4 py-3">
+          <summary className="cursor-pointer text-sm font-medium text-gray-500 hover:text-gray-300">
             Expected CSV columns ({csvInputFields.length})
           </summary>
           <div className="mt-3 flex flex-wrap gap-2">
             {csvInputFields.map((field) => (
               <span
-                className="rounded-full border border-zinc-700 bg-zinc-800 px-2.5 py-1 font-mono text-xs font-semibold text-zinc-400"
+                className="rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 font-mono text-xs font-semibold text-gray-400"
                 key={field}
               >
                 {field}
@@ -2666,41 +2682,62 @@ function AuditLog({
 }
 
 function CompletionState({
-  auditEntries,
+  casesWithStatuses,
+  datasetSummary,
   onExport,
   onGoAudit,
   onReviewAgain,
   onUndo,
+  totalTransactions,
 }: {
   auditEntries: AuditEntry[];
+  casesWithStatuses: FraudCase[];
+  datasetSummary: DatasetSummary;
   onExport: () => void;
   onGoAudit: () => void;
   onReviewAgain: () => void;
   onUndo: () => void;
+  totalTransactions: number;
 }) {
+  const escalated = casesWithStatuses.filter((c) => c.review_status === "escalated_fraud");
+  const approved = casesWithStatuses.filter((c) => c.review_status === "approved_legitimate");
+  const dismissed = casesWithStatuses.filter((c) => c.review_status === "dismissed_flag");
+  const totalFraudValue = escalated.reduce((sum, c) => sum + c.amount, 0);
+  const totalCleanValue = approved.reduce((sum, c) => sum + c.amount, 0);
+  const totalDismissedValue = dismissed.reduce((sum, c) => sum + c.amount, 0);
+
+  const decisionData = [
+    { label: "Confirmed fraud", value: escalated.length, color: "#ef4444" },
+    { label: "Approved clean", value: approved.length, color: "#10b981" },
+    { label: "Dismissed flag", value: dismissed.length, color: "#94a3b8" },
+  ].filter((d) => d.value > 0);
+
   return (
-    <main className="mx-auto flex min-h-screen w-full max-w-4xl items-center px-5 py-8">
-      <section className="w-full rounded-lg border border-zinc-200 bg-white p-8 text-center shadow-sm">
-        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-emerald-50 text-emerald-700">
-          <CheckCircle2 className="h-8 w-8" />
+    <main className="mx-auto w-full max-w-6xl px-5 py-8 sm:px-8">
+
+      {/* Header */}
+      <div className="mb-6 flex flex-col gap-4 border-b border-zinc-200 pb-6 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <div className="mb-3 inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
+            <CheckCircle2 className="h-3.5 w-3.5" />
+            Review complete
+          </div>
+          <h1 className="text-3xl font-bold tracking-tight text-zinc-950">Session Report</h1>
+          <p className="mt-1.5 text-sm text-zinc-500">
+            {datasetSummary.fileName} · {number.format(totalTransactions)} total transactions · {number.format(casesWithStatuses.length)} flagged cases reviewed
+          </p>
         </div>
-        <h1 className="mt-5 text-4xl font-semibold tracking-normal text-zinc-950">
-          Review complete.
-        </h1>
-        <p className="mx-auto mt-3 max-w-2xl text-base leading-7 text-zinc-600">
-          Export your updated CSV or inspect the audit log.
-        </p>
-        <div className="mt-6 grid gap-3 sm:grid-cols-4">
+        <div className="flex shrink-0 flex-wrap gap-2">
           <button
-            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-md bg-emerald-600 px-4 text-sm font-semibold text-white shadow-sm hover:bg-emerald-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600"
+            className="inline-flex min-h-10 items-center gap-2 rounded-md bg-emerald-600 px-4 text-sm font-semibold text-white shadow-sm hover:bg-emerald-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600"
             onClick={onExport}
             type="button"
           >
             <Download className="h-4 w-4" />
-            Export CSV
+            Export Report
           </button>
           <button
-            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-md border border-zinc-200 bg-white px-4 text-sm font-semibold text-zinc-800 shadow-sm hover:bg-zinc-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-950"
+            className="inline-flex min-h-10 items-center gap-2 rounded-md border border-zinc-200 bg-white px-4 text-sm font-semibold text-zinc-800 shadow-sm hover:bg-zinc-50"
             onClick={onGoAudit}
             type="button"
           >
@@ -2708,27 +2745,178 @@ function CompletionState({
             Audit Log
           </button>
           <button
-            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-md border border-zinc-200 bg-white px-4 text-sm font-semibold text-zinc-800 shadow-sm hover:bg-zinc-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-950"
-            onClick={onReviewAgain}
-            type="button"
-          >
-            <ShieldAlert className="h-4 w-4" />
-            Review Queue
-          </button>
-          <button
-            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-md border border-zinc-200 bg-white px-4 text-sm font-semibold text-zinc-800 shadow-sm hover:bg-zinc-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-950"
+            className="inline-flex min-h-10 items-center gap-2 rounded-md border border-zinc-200 bg-white px-4 text-sm font-semibold text-zinc-800 shadow-sm hover:bg-zinc-50"
             onClick={onUndo}
             type="button"
           >
             <RotateCcw className="h-4 w-4" />
-            Undo
+            Undo Last
           </button>
         </div>
-        <p className="mt-5 text-sm font-medium text-zinc-500">
-          {auditEntries.length} audit decision
-          {auditEntries.length === 1 ? "" : "s"} recorded.
-        </p>
+      </div>
+
+      {/* Summary stats */}
+      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="rounded-xl border border-zinc-200 bg-white p-5 shadow-sm">
+          <p className="text-sm font-medium text-zinc-500">Total reviewed</p>
+          <p className="mt-2 text-3xl font-bold text-zinc-950">{number.format(casesWithStatuses.length)}</p>
+          <p className="mt-1 text-xs text-zinc-400">of {number.format(totalTransactions)} transactions</p>
+        </div>
+        <div className="rounded-xl border border-red-200 bg-red-50 p-5 shadow-sm">
+          <p className="text-sm font-medium text-red-700">Confirmed fraud</p>
+          <p className="mt-2 text-3xl font-bold text-red-900">{number.format(escalated.length)}</p>
+          <p className="mt-1 text-xs text-red-600">{money.format(totalFraudValue)} total value</p>
+        </div>
+        <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-5 shadow-sm">
+          <p className="text-sm font-medium text-emerald-700">Approved clean</p>
+          <p className="mt-2 text-3xl font-bold text-emerald-900">{number.format(approved.length)}</p>
+          <p className="mt-1 text-xs text-emerald-600">{money.format(totalCleanValue)} total value</p>
+        </div>
+        <div className="rounded-xl border border-zinc-200 bg-white p-5 shadow-sm">
+          <p className="text-sm font-medium text-zinc-500">Dismissed flags</p>
+          <p className="mt-2 text-3xl font-bold text-zinc-950">{number.format(dismissed.length)}</p>
+          <p className="mt-1 text-xs text-zinc-400">false positives</p>
+        </div>
       </section>
+
+      {/* Charts + financial impact */}
+      <section className="mt-5 grid gap-5 lg:grid-cols-2">
+        <PieChart
+          data={decisionData}
+          title="Review decisions"
+          subtitle="Breakdown of reviewer decisions across all flagged cases."
+        />
+        <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm">
+          <h2 className="text-lg font-semibold text-zinc-950">Financial impact</h2>
+          <p className="mt-1 text-sm text-zinc-500">Transaction value totals by reviewer decision.</p>
+          <div className="mt-5 space-y-3">
+            <div className="flex items-center justify-between rounded-lg border border-red-200 bg-red-50 px-4 py-3">
+              <div className="flex items-center gap-2">
+                <span className="h-2.5 w-2.5 rounded-full bg-red-500" />
+                <span className="text-sm font-semibold text-red-900">Confirmed fraud</span>
+              </div>
+              <span className="text-base font-bold text-red-900">{money.format(totalFraudValue)}</span>
+            </div>
+            <div className="flex items-center justify-between rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3">
+              <div className="flex items-center gap-2">
+                <span className="h-2.5 w-2.5 rounded-full bg-emerald-500" />
+                <span className="text-sm font-semibold text-emerald-900">Approved clean</span>
+              </div>
+              <span className="text-base font-bold text-emerald-900">{money.format(totalCleanValue)}</span>
+            </div>
+            <div className="flex items-center justify-between rounded-lg bg-zinc-50 px-4 py-3">
+              <div className="flex items-center gap-2">
+                <span className="h-2.5 w-2.5 rounded-full bg-zinc-400" />
+                <span className="text-sm font-semibold text-zinc-700">Dismissed (false positives)</span>
+              </div>
+              <span className="text-base font-bold text-zinc-700">{money.format(totalDismissedValue)}</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Confirmed fraud cases */}
+      <section className="mt-8">
+        <div className="mb-4">
+          <h2 className="flex items-center gap-2 text-xl font-bold text-zinc-950">
+            Confirmed Fraud
+            <span className="rounded-full bg-red-100 px-2.5 py-0.5 text-sm font-semibold text-red-700">
+              {escalated.length}
+            </span>
+          </h2>
+          <p className="mt-1 text-sm text-zinc-500">Transactions escalated as confirmed fraud by the reviewer.</p>
+        </div>
+        {escalated.length === 0 ? (
+          <div className="rounded-xl border border-dashed border-zinc-300 bg-white p-8 text-center">
+            <p className="text-sm text-zinc-500">No transactions were escalated as fraud.</p>
+          </div>
+        ) : (
+          <div className="overflow-hidden rounded-xl border border-red-200 bg-white shadow-sm">
+            <div className="hidden grid-cols-[1fr_110px_130px_70px_110px] gap-3 border-b border-red-100 bg-red-50 px-5 py-3 text-xs font-semibold uppercase tracking-wide text-red-700 sm:grid">
+              <span>Transaction / Merchant</span>
+              <span>Amount</span>
+              <span>Card</span>
+              <span>Score</span>
+              <span>Severity</span>
+            </div>
+            <div className="divide-y divide-zinc-100">
+              {escalated.map((c) => (
+                <div
+                  key={c.transaction_id}
+                  className="grid grid-cols-1 gap-2 px-5 py-4 transition-colors hover:bg-red-50/40 sm:grid-cols-[1fr_110px_130px_70px_110px] sm:items-center sm:gap-3"
+                >
+                  <div>
+                    <p className="text-sm font-semibold text-zinc-950">{c.transaction_id}</p>
+                    <p className="mt-0.5 text-xs text-zinc-500">{c.merchant_name} · {titleCase(c.merchant_category)}</p>
+                    <div className="mt-1.5 flex flex-wrap gap-1">
+                      {c.detected_patterns.slice(0, 2).map((p) => (
+                        <span key={p} className="rounded-full border border-red-200 bg-red-50 px-2 py-0.5 text-xs font-medium text-red-700">
+                          {formatPattern(p)}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                  <span className="text-sm font-bold text-zinc-950">{money.format(c.amount)}</span>
+                  <span className="truncate font-mono text-xs text-zinc-500">{c.card_id}</span>
+                  <span className="text-sm font-bold text-red-700">{c.fraud_score}</span>
+                  <SeverityBadge severity={c.severity} />
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </section>
+
+      {/* Approved clean cases */}
+      <section className="mt-8 pb-10">
+        <details open={approved.length <= 5}>
+          <summary className="mb-4 flex cursor-pointer list-none items-start justify-between gap-4">
+            <div>
+              <h2 className="flex items-center gap-2 text-xl font-bold text-zinc-950">
+                Approved Clean
+                <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 text-sm font-semibold text-emerald-700">
+                  {approved.length}
+                </span>
+              </h2>
+              <p className="mt-1 text-sm text-zinc-500">Transactions approved as legitimate by the reviewer.</p>
+            </div>
+            <ChevronDown className="mt-1 h-5 w-5 shrink-0 text-zinc-400" />
+          </summary>
+          {approved.length === 0 ? (
+            <div className="rounded-xl border border-dashed border-zinc-300 bg-white p-8 text-center">
+              <p className="text-sm text-zinc-500">No transactions were approved as clean.</p>
+            </div>
+          ) : (
+            <div className="overflow-hidden rounded-xl border border-emerald-200 bg-white shadow-sm">
+              <div className="hidden grid-cols-[1fr_110px_130px_70px_110px] gap-3 border-b border-emerald-100 bg-emerald-50 px-5 py-3 text-xs font-semibold uppercase tracking-wide text-emerald-700 sm:grid">
+                <span>Transaction / Merchant</span>
+                <span>Amount</span>
+                <span>Card</span>
+                <span>Score</span>
+                <span>Severity</span>
+              </div>
+              <div className="divide-y divide-zinc-100">
+                {approved.map((c) => (
+                  <div
+                    key={c.transaction_id}
+                    className="grid grid-cols-1 gap-2 px-5 py-4 transition-colors hover:bg-emerald-50/40 sm:grid-cols-[1fr_110px_130px_70px_110px] sm:items-center sm:gap-3"
+                  >
+                    <div>
+                      <p className="text-sm font-semibold text-zinc-950">{c.transaction_id}</p>
+                      <p className="mt-0.5 text-xs text-zinc-500">{c.merchant_name} · {titleCase(c.merchant_category)}</p>
+                    </div>
+                    <span className="text-sm font-semibold text-zinc-950">{money.format(c.amount)}</span>
+                    <span className="truncate font-mono text-xs text-zinc-500">{c.card_id}</span>
+                    <span className="text-sm font-semibold text-zinc-600">{c.fraud_score}</span>
+                    <SeverityBadge severity={c.severity} />
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </details>
+      </section>
+
     </main>
   );
 }
@@ -3101,17 +3289,13 @@ function AppHeader({
 
 function FrogIcon({ size = 40 }: { size?: number }) {
   return (
-    <div
-      className="flex shrink-0 items-center justify-center rounded-full bg-white shadow-sm ring-1 ring-zinc-200 overflow-hidden"
-      style={{ width: size, height: size }}
-    >
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        src="/app-logo.png"
-        alt="FraudFrog logo"
-        style={{ width: size * 0.82, height: size * 0.82, objectFit: "contain", marginLeft: size * 0.06 }}
-      />
-    </div>
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src="/Logo_coloured.png"
+      alt="FraudFrog logo"
+      className="shrink-0"
+      style={{ width: size, height: size, objectFit: "contain" }}
+    />
   );
 }
 
@@ -3151,7 +3335,7 @@ function Sidebar({
   return (
     <aside className="sticky top-0 flex h-screen w-56 shrink-0 flex-col border-r border-zinc-200 bg-white">
       <div className="flex items-center gap-2.5 border-b border-zinc-200 bg-emerald-50/60 px-4 py-4">
-        <FrogIcon size={34} />
+        <FrogIcon size={42} />
         <div>
           <div className="text-sm font-semibold text-zinc-950">FraudFrog</div>
           <div className="text-xs text-zinc-500">Leap Ahead of Fraud</div>
@@ -3379,34 +3563,6 @@ function relatedGroup(reason: string) {
   return "Similar pattern";
 }
 
-function polarToCartesian(cx: number, cy: number, r: number, angleDeg: number) {
-  const rad = (angleDeg * Math.PI) / 180;
-  return { x: cx + r * Math.cos(rad), y: cy + r * Math.sin(rad) };
-}
-
-function donutSlicePath(
-  cx: number,
-  cy: number,
-  outerR: number,
-  innerR: number,
-  startAngle: number,
-  endAngle: number,
-) {
-  const end = Math.min(endAngle, startAngle + 359.99);
-  const o1 = polarToCartesian(cx, cy, outerR, startAngle);
-  const o2 = polarToCartesian(cx, cy, outerR, end);
-  const i1 = polarToCartesian(cx, cy, innerR, end);
-  const i2 = polarToCartesian(cx, cy, innerR, startAngle);
-  const large = end - startAngle > 180 ? 1 : 0;
-  return [
-    `M ${o1.x.toFixed(2)} ${o1.y.toFixed(2)}`,
-    `A ${outerR} ${outerR} 0 ${large} 1 ${o2.x.toFixed(2)} ${o2.y.toFixed(2)}`,
-    `L ${i1.x.toFixed(2)} ${i1.y.toFixed(2)}`,
-    `A ${innerR} ${innerR} 0 ${large} 0 ${i2.x.toFixed(2)} ${i2.y.toFixed(2)}`,
-    "Z",
-  ].join(" ");
-}
-
 function PieChart({
   data,
   subtitle,
@@ -3417,98 +3573,85 @@ function PieChart({
   title: string;
 }) {
   const total = data.reduce((sum, d) => sum + d.value, 0);
-  const cx = 80;
-  const cy = 80;
-  const outerR = 68;
-  const innerR = 40;
-  const chartSegments =
-    total === 0
-      ? []
-      : data.reduce<{
-        endAngle: number;
-        segments: Array<{ color: string; label: string; path: string }>;
-      }>(
-        (accumulator, segment) => {
-          const angle = (segment.value / total) * 360;
-          const startAngle = accumulator.endAngle;
-          const endAngle = startAngle + angle;
 
-          return {
-            endAngle,
-            segments: [
-              ...accumulator.segments,
-              {
-                color: segment.color,
-                label: segment.label,
-                path: donutSlicePath(cx, cy, outerR, innerR, startAngle, endAngle),
-              },
-            ],
-          };
-        },
-        { endAngle: -90, segments: [] },
-      ).segments;
+  const toKey = (s: string) =>
+    s.toLowerCase().replace(/[^a-z0-9]/g, "_").replace(/_+/g, "_").replace(/^_|_$/g, "");
+
+  const chartData = data.map((d) => ({
+    name: toKey(d.label),
+    value: d.value,
+    fill: d.color,
+  }));
+
+  const chartConfig: ChartConfig = {
+    value: { label: "Count" },
+    ...Object.fromEntries(
+      data.map((d) => [toKey(d.label), { label: d.label, color: d.color }])
+    ),
+  };
 
   return (
-    <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm">
-      <h2 className="text-lg font-semibold text-zinc-950">{title}</h2>
-      {subtitle && (
-        <p className="mt-1 text-sm text-zinc-500">{subtitle}</p>
-      )}
-
-      {total === 0 ? (
-        <div className="mt-5 flex h-32 items-center justify-center rounded-lg bg-zinc-50 text-sm text-zinc-400">
-          No data yet - upload a CSV to see this chart.
-        </div>
-      ) : (
-        <div className="mt-5 flex flex-col items-center gap-6 sm:flex-row">
-          <svg className="shrink-0" height={160} viewBox="0 0 160 160" width={160}>
-            {chartSegments.map((segment) => (
-              <path d={segment.path} fill={segment.color} key={segment.label} />
-            ))}
-            <text
-              dominantBaseline="middle"
-              fill="#09090b"
-              fontSize={20}
-              fontWeight={600}
-              textAnchor="middle"
-              x={cx}
-              y={cy - 7}
-            >
-              {total.toLocaleString()}
-            </text>
-            <text
-              dominantBaseline="middle"
-              fill="#71717a"
-              fontSize={11}
-              textAnchor="middle"
-              x={cx}
-              y={cy + 12}
-            >
-              total
-            </text>
-          </svg>
-
-          <div className="flex flex-1 flex-col gap-2.5">
-            {data.map((segment) => (
-              <div className="flex items-center gap-2" key={segment.label}>
-                <span
-                  className="h-2.5 w-2.5 shrink-0 rounded-full"
-                  style={{ backgroundColor: segment.color }}
-                />
-                <span className="flex-1 truncate text-sm text-zinc-600">
-                  {segment.label}
-                </span>
-                <span className="text-sm font-semibold text-zinc-950">
-                  {Math.round((segment.value / total) * 100)}%
-                </span>
-                <span className="w-10 text-right text-sm text-zinc-400">
-                  {segment.value.toLocaleString()}
-                </span>
-              </div>
-            ))}
+    <Card className="flex flex-col rounded-xl bg-[#0A0A0C] border-white/[0.08] shadow-xl hover:border-white/[0.15] transition-colors duration-200 text-white">
+      <CardHeader className="items-start pb-2 px-6 pt-5">
+        <CardTitle className="text-lg font-semibold text-white">{title}</CardTitle>
+        {subtitle && (
+          <CardDescription className="text-sm text-gray-500 mt-1">{subtitle}</CardDescription>
+        )}
+      </CardHeader>
+      <CardContent className="flex-1 px-6 pb-5 pt-0">
+        {total === 0 ? (
+          <div className="mt-2 flex h-32 items-center justify-center rounded-lg bg-[#101018] text-sm text-gray-500">
+            No data yet — upload a CSV to see this chart.
           </div>
-        </div>
-      )}
-    </div>
+        ) : (
+          <>
+            <ChartContainer
+              config={chartConfig}
+              className="[&_.recharts-text]:fill-white mx-auto aspect-square max-h-[200px]"
+            >
+              <RechartsPieChart>
+                <ChartTooltip content={<ChartTooltipContent nameKey="name" hideLabel />} />
+                <Pie
+                  data={chartData}
+                  dataKey="value"
+                  innerRadius={38}
+                  cornerRadius={6}
+                  paddingAngle={3}
+                >
+                  <LabelList
+                    dataKey="value"
+                    stroke="none"
+                    fontSize={11}
+                    fontWeight={500}
+                    fill="currentColor"
+                    formatter={(value: unknown) => {
+                      const n = typeof value === "number" ? value : 0;
+                      return total > 0 ? `${Math.round((n / total) * 100)}%` : "";
+                    }}
+                  />
+                </Pie>
+              </RechartsPieChart>
+            </ChartContainer>
+            <div className="mt-3 flex flex-col gap-2">
+              {data.map((d) => (
+                <div className="flex items-center gap-2" key={d.label}>
+                  <span
+                    className="h-2.5 w-2.5 shrink-0 rounded-full"
+                    style={{ backgroundColor: d.color }}
+                  />
+                  <span className="flex-1 truncate text-sm text-gray-400">{d.label}</span>
+                  <span className="text-sm font-semibold text-white">
+                    {Math.round((d.value / total) * 100)}%
+                  </span>
+                  <span className="w-10 text-right text-sm text-gray-500">
+                    {d.value.toLocaleString()}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+      </CardContent>
+    </Card>
   );
 }
