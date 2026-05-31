@@ -861,6 +861,24 @@ export default function FraudFrogApp() {
     addToast(`${caseId} ${action.toast}.`, nextStatus === "escalated_fraud" ? "warning" : "success");
   };
 
+  // Undo a single Quick Review swipe without leaving the swipe view: the stack
+  // restores the card visually, this reverts the case to unreviewed and drops
+  // its audit entry so stats and progress roll back in lockstep.
+  const handleSwipeUndo = (caseId: string) => {
+    setStatuses((prev) => {
+      if (!(caseId in prev)) return prev;
+      const next = { ...prev };
+      delete next[caseId];
+      return next;
+    });
+    setAuditEntries((prev) => {
+      const index = prev.findIndex((entry) => entry.transactionId === caseId);
+      return index === -1 ? prev : prev.filter((_, i) => i !== index);
+    });
+    setLastAction((prev) => (prev?.caseId === caseId ? null : prev));
+    addToast(`Undid review for ${caseId}.`, "info");
+  };
+
   // ── Session persistence ──────────────────────────────────────────────────
   // Restore a previous session on mount so a refresh doesn't lose review work.
   // Hydrating client-only persisted state via setState here is the intended
@@ -1165,6 +1183,7 @@ export default function FraudFrogApp() {
                     onApprove={(id) => handleSwipeAction(id, "approved_legitimate")}
                     onFraud={(id) => handleSwipeAction(id, "escalated_fraud")}
                     onReview={(id) => handleSwipeAction(id, "dismissed_flag")}
+                    onUndo={handleSwipeUndo}
                     onComplete={() => setView("complete")}
                     totalCasesInQueue={casesWithStatuses.length}
                     startIndexOffset={reviewedCount}

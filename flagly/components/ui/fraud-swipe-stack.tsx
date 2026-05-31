@@ -16,6 +16,7 @@ import {
   Clock3,
   Info,
   ShieldAlert,
+  Undo2,
   X,
 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -51,6 +52,7 @@ export interface FraudSwipeStackProps {
   onApprove: (caseId: string) => void;
   onFraud: (caseId: string) => void;
   onReview?: (caseId: string) => void;
+  onUndo?: (caseId: string) => void;
   onComplete?: () => void;
   totalCasesInQueue: number;
   startIndexOffset?: number;
@@ -64,6 +66,7 @@ export function FraudSwipeStack({
   onApprove,
   onFraud,
   onReview,
+  onUndo,
   onComplete,
   totalCasesInQueue,
   startIndexOffset = 0,
@@ -77,6 +80,8 @@ export function FraudSwipeStack({
   // after the exit animation completes.
   const [queue, setQueue] = useState<FraudCase[]>(() => [...cases]);
   const [initialQueueLength] = useState(cases.length);
+  // Cases swiped this session, oldest→newest, so Undo can restore the last one.
+  const [history, setHistory] = useState<FraudCase[]>([]);
 
   const [detailCase, setDetailCase] = useState<FraudCase | null>(null);
   const swipingRef = useRef(false);
@@ -114,11 +119,24 @@ export function FraudSwipeStack({
         else if (dir === "left") onFraud(fraudCase.transaction_id);
         else onReview?.(fraudCase.transaction_id);
         setQueue((prev) => prev.slice(1));
+        setHistory((prev) => [...prev, fraudCase]);
         swipingRef.current = false;
       });
     },
     [queue, onApprove, onFraud, onReview, x, y],
   );
+
+  // Undo the most recent swipe: restore the card to the top of the stack and
+  // tell the parent to revert that case to unreviewed.
+  const undo = useCallback(() => {
+    if (swipingRef.current || history.length === 0) return;
+    const last = history[history.length - 1];
+    setHistory((prev) => prev.slice(0, -1));
+    setQueue((prev) => [last, ...prev]);
+    x.set(0);
+    y.set(0);
+    onUndo?.(last.transaction_id);
+  }, [history, onUndo, x, y]);
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -132,10 +150,11 @@ export function FraudSwipeStack({
       if (e.key === "ArrowRight") { e.preventDefault(); void swipe("right"); }
       else if (e.key === "ArrowLeft") { e.preventDefault(); void swipe("left"); }
       else if (e.key === "ArrowDown") { e.preventDefault(); void swipe("down"); }
+      else if (e.key === "u" || e.key === "U" || e.key === "Backspace") { e.preventDefault(); undo(); }
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [swipe]);
+  }, [swipe, undo]);
 
   // Notify parent when the queue is fully processed
   useEffect(() => {
@@ -311,11 +330,24 @@ export function FraudSwipeStack({
         />
       </div>
 
+      {/* Undo last swipe */}
+      <button
+        onClick={undo}
+        disabled={history.length === 0}
+        type="button"
+        aria-label="Undo last swipe - U"
+        className="mt-4 inline-flex cursor-pointer items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-semibold text-zinc-600 transition-colors duration-200 hover:bg-zinc-100 hover:text-zinc-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-950 disabled:cursor-not-allowed disabled:text-zinc-300 disabled:hover:bg-transparent"
+      >
+        <Undo2 className="h-4 w-4" />
+        Undo last
+      </button>
+
       {/* Keyboard hint */}
       <p className="mt-3 text-center text-xs text-zinc-400">
         <kbd className="font-mono">←</kbd> Escalate &nbsp;·&nbsp;
         <kbd className="font-mono">→</kbd> Approve &nbsp;·&nbsp;
-        <kbd className="font-mono">↓</kbd> Dismiss
+        <kbd className="font-mono">↓</kbd> Dismiss &nbsp;·&nbsp;
+        <kbd className="font-mono">U</kbd> Undo
       </p>
 
       {/* Detail drawer */}
