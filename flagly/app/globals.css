@@ -1,8 +1,10 @@
 @import "tailwindcss";
 
 :root {
-  --background: #eef4f1;
-  --foreground: #13231f;
+  /* Light/green theme base. The upload hero sets its own dark bg-zinc-950,
+     so the dark GridScan intro is unaffected; everything else is light. */
+  --background: #f2f7f3;
+  --foreground: #18181b;
   --ff-app-bg: #eef4f1;
   --ff-surface: #ffffff;
   --ff-surface-muted: #f6faf8;
@@ -117,6 +119,96 @@ body {
   width: 100%;
   height: 100%;
   overflow: hidden;
+}
+
+/* ── Dark SaaS visual system ──────────────────────────────────────────────── */
+
+@keyframes glow-float {
+  0%, 100% { opacity: 0.7; transform: translate(-50%, 0px) scale(1); }
+  50%       { opacity: 1;   transform: translate(-50%, -28px) scale(1.04); }
+}
+
+@keyframes glow-drift {
+  0%, 100% { transform: translate(0px,  0px); }
+  33%       { transform: translate(14px, -20px); }
+  66%       { transform: translate(-12px, 14px); }
+}
+
+@keyframes fade-in-up {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Dot grid texture */
+.bg-dot-grid {
+  background-image: radial-gradient(circle, rgba(255,255,255,0.10) 1px, transparent 1px);
+  background-size: 28px 28px;
+}
+
+/* Card fade-in */
+.animate-fade-in {
+  animation: fade-in-up 0.4s ease-out both;
+}
+
+/* Risk-based card glow borders */
+.risk-border-critical {
+  border-color: rgba(239, 68, 68, 0.50) !important;
+  box-shadow:
+    0 0 0 1px rgba(239, 68, 68, 0.18),
+    0 0 30px rgba(239, 68, 68, 0.12),
+    0 20px 40px -12px rgba(0, 0, 0, 0.7);
+}
+.risk-border-high {
+  border-color: rgba(249, 115, 22, 0.40) !important;
+  box-shadow:
+    0 0 0 1px rgba(249, 115, 22, 0.14),
+    0 0 22px rgba(249, 115, 22, 0.09),
+    0 20px 40px -12px rgba(0, 0, 0, 0.6);
+}
+.risk-border-medium {
+  border-color: rgba(245, 158, 11, 0.32) !important;
+  box-shadow:
+    0 0 0 1px rgba(245, 158, 11, 0.11),
+    0 0 16px rgba(245, 158, 11, 0.07),
+    0 20px 40px -12px rgba(0, 0, 0, 0.55);
+}
+.risk-border-low {
+  border-color: rgba(255, 255, 255, 0.08) !important;
+  box-shadow: 0 20px 40px -12px rgba(0, 0, 0, 0.45);
+}
+
+/* Primary white pill button */
+.btn-primary-white {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  background: #ffffff;
+  color: #000000;
+  border: none;
+  border-radius: 9999px;
+  padding: 0.625rem 1.5rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  box-shadow: 0 0 0 1px rgba(255,255,255,0.12), 0 4px 16px rgba(0,0,0,0.35);
+  transition: background 0.2s, box-shadow 0.2s;
+  cursor: pointer;
+  white-space: nowrap;
+  line-height: 1.25rem;
+}
+.btn-primary-white:hover {
+  background: #e5e7eb;
+  box-shadow: 0 0 0 1px rgba(255,255,255,0.18), 0 6px 20px rgba(0,0,0,0.45);
+}
+.btn-primary-white:focus-visible {
+  outline: 2px solid rgba(99,102,241,0.7);
+  outline-offset: 2px;
+}
+.btn-primary-white:disabled {
+  background: rgba(255,255,255,0.12);
+  color: rgba(255,255,255,0.35);
+  cursor: not-allowed;
+  box-shadow: none;
 }
 
 .fraudfrog-theme .shadow-lg,
