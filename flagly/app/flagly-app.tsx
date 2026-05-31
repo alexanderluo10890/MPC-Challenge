@@ -319,6 +319,7 @@ export default function FlaglyApp() {
   const [processing, setProcessing] = useState(false);
   const [processingStep, setProcessingStep] = useState(0);
   const [sourceRows, setSourceRows] = useState<ScoredTransactionCsvRow[]>([]);
+  const [sourceCsvText, setSourceCsvText] = useState<string | null>(null);
   const [isPythonScored, setIsPythonScored] = useState(false);
   const [allScoredCases, setAllScoredCases] = useState<FraudCase[]>([]);
   const [datasetSummary, setDatasetSummary] = useState<DatasetSummary>({
@@ -400,6 +401,7 @@ export default function FlaglyApp() {
 
     try {
       const text = await file.text();
+      setSourceCsvText(text);
       const parsed = parseTransactionsCsv(text);
       setSourceRows(parsed.rows);
       setIsPythonScored(parsed.isScored);
@@ -448,11 +450,43 @@ export default function FlaglyApp() {
     }
 
     setProcessing(true);
+    let rowsToUse = sourceRows;
+
+    // If the CSV wasn't already Python-scored, call the server to run fraud_detector.py
+    if (!isPythonScored) {
+      try {
+        if (!sourceCsvText) {
+          throw new Error("Raw CSV text not available for server scoring.");
+        }
+        const resp = await fetch("/api/score", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ csv: sourceCsvText, sensitivity }),
+        });
+        if (!resp.ok) {
+          const msg = await resp.text();
+          throw new Error(msg || "Server scoring failed.");
+        }
+        const scoredCsv = await resp.text();
+        const parsed = parseTransactionsCsv(scoredCsv);
+        rowsToUse = parsed.rows;
+        setSourceRows(parsed.rows);
+        setIsPythonScored(true);
+        setUploadWarnings(parsed.warnings);
+        setDatasetSummary((prev) => ({ ...prev, fileName: prev.fileName }));
+        addToast(`${selectedFileName || 'transactions.csv'} scored by Python detector.`, "success");
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        setProcessing(false);
+        addToast(`Scoring failed: ${message}`, "error");
+        return;
+      }
+    }
     for (let step = 0; step < processingSteps.length; step += 1) {
       setProcessingStep(step);
       await wait(700);
     }
-    const scoredCases = buildMockFraudCases(sourceRows);
+    const scoredCases = buildMockFraudCases(rowsToUse);
     const nextSummary = getDatasetSummary(
       sourceRows,
       scoredCases,

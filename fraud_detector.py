@@ -553,8 +553,15 @@ def add_fraud_scores(df):
             score += 10
             reasons.append("Transaction follows more than 7 days of card inactivity")
 
-        # ── Final score ───────────────────────────────────────────────────
-        score = min(100, score)
+        # ── Apply sensitivity multiplier and final score ────────────────
+        # Sensitivity can be provided via global SENSITIVITY_MULTIPLIER mapping
+        multiplier = globals().get("_SENSITIVITY_MULTIPLIER", 1.0)
+        try:
+            score = float(score) * float(multiplier)
+        except Exception:
+            score = float(score)
+
+        score = int(min(100, round(score)))
 
         # ── Major signal count (20 defined conditions) ────────────────────
         major_signals = sum([
@@ -697,6 +704,7 @@ def build_features(input_path, output_path):
     df = add_inactivity_features(df)
 
     print("Scoring transactions...")
+    # Allow an optional sensitivity parameter via global variable set by caller
     df = add_fraud_scores(df)
 
     df.to_csv(output_path, index=False)
@@ -783,8 +791,18 @@ def build_features(input_path, output_path):
 
 
 if __name__ == '__main__':
-    if len(sys.argv) != 3:
-        print("Usage: python fraud_detector.py <input.csv> <output.csv>")
+    if len(sys.argv) < 3:
+        print("Usage: python fraud_detector.py <input.csv> <output.csv> [sensitivity]")
         sys.exit(1)
+
+    sensitivity = sys.argv[3] if len(sys.argv) >= 4 else "Balanced"
+    # Sensitivity maps to a multiplier applied to the computed rule score.
+    mapping = {
+        "Conservative": 0.85,
+        "Balanced": 1.0,
+        "Aggressive": 1.15,
+    }
+    # Expose multiplier via a module-global so add_fraud_scores can access it
+    globals()['_SENSITIVITY_MULTIPLIER'] = mapping.get(sensitivity, 1.0)
 
     build_features(input_path=sys.argv[1], output_path=sys.argv[2])
