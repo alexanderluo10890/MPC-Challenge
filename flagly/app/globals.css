@@ -3,8 +3,8 @@
 :root {
   /* Light/green theme base. The upload hero sets its own dark bg-zinc-950,
      so the dark GridScan intro is unaffected; everything else is light. */
-  --background: #f2f7f3;
-  --foreground: #18181b;
+  --background: #000000;
+  --foreground: #ffffff;
   --ff-app-bg: #eef4f1;
   --ff-surface: #ffffff;
   --ff-surface-muted: #f6faf8;
