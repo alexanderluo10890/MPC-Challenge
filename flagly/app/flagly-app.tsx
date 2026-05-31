@@ -267,14 +267,15 @@ function makeSummary(fraudCase: FraudCase) {
   return `This case resembles ${patternTitle.toLowerCase()}. The card normally has ${fraudCase.baseline.common_categories
     .slice(0, 2)
     .join(" and ")} activity, but this transaction is a ${money.format(
-      fraudCase.amount,
-    )} ${formatChannel(fraudCase.channel).toLowerCase()} ${fraudCase.merchant_category.replaceAll(
-      "_",
-      " ",
-    )} purchase from ${fraudCase.merchant_country === fraudCase.cardholder_country
+    fraudCase.amount,
+  )} ${formatChannel(fraudCase.channel).toLowerCase()} ${fraudCase.merchant_category.replaceAll(
+    "_",
+    " ",
+  )} purchase from ${
+    fraudCase.merchant_country === fraudCase.cardholder_country
       ? "a new merchant"
       : "a foreign merchant country"
-    }. The score remains based only on deterministic signals.`;
+  }. The score remains based only on deterministic signals.`;
 }
 
 function createStatusMap(cases: FraudCase[]) {
@@ -313,7 +314,7 @@ function getSensitivitySummary(
   return `Balanced mode flags ${flaggedCount} of ${totalTransactions} transactions and keeps precision and recall even.`;
 }
 
-export default function FraudFrogApp() {
+export default function FlaglyApp() {
   const [view, setView] = useState<View>("upload");
   const [processing, setProcessing] = useState(false);
   const [processingStep, setProcessingStep] = useState(0);
@@ -422,7 +423,7 @@ export default function FraudFrogApp() {
       setActiveIndex(0);
       addToast(
         parsed.isScored
-          ? `${file.name} loaded - Python fraud scores detected (${parsed.rows.length} transactions).`
+          ? `${file.name} loaded — Python fraud scores detected (${parsed.rows.length} transactions).`
           : `${file.name} loaded with ${parsed.rows.length} valid transactions.`,
         "success",
       );
@@ -576,9 +577,9 @@ export default function FraudFrogApp() {
       nextCases.length === 0
         ? 0
         : Math.min(
-          stillVisible ? currentPosition + 1 : currentPosition,
-          nextCases.length - 1,
-        );
+            stillVisible ? currentPosition + 1 : currentPosition,
+            nextCases.length - 1,
+          );
 
     setStatuses(nextStatuses);
     setAuditEntries((current) => [newAuditEntry, ...current]);
@@ -679,9 +680,9 @@ export default function FraudFrogApp() {
     ]);
     setLastAction({ caseId, previousStatus, newStatus: nextStatus, auditId, actionLabel: action.audit });
     setSwipeStats((prev) => ({
-      approved: prev.approved + (nextStatus === "approved_legitimate" ? 1 : 0),
-      escalated: prev.escalated + (nextStatus === "escalated_fraud" ? 1 : 0),
-      review: prev.review + (nextStatus === "dismissed_flag" ? 1 : 0),
+      approved:  prev.approved  + (nextStatus === "approved_legitimate" ? 1 : 0),
+      escalated: prev.escalated + (nextStatus === "escalated_fraud"     ? 1 : 0),
+      review:    prev.review    + (nextStatus === "dismissed_flag"      ? 1 : 0),
     }));
     addToast(`${caseId} ${action.toast}.`, nextStatus === "escalated_fraud" ? "warning" : "success");
   };
@@ -753,7 +754,7 @@ export default function FraudFrogApp() {
   );
 
   return (
-    <div className="fraudfrog-theme min-h-screen bg-[#f5f7f8] text-zinc-950">
+    <div className="min-h-screen bg-[#f5f7f8] text-zinc-950">
       {view === "upload" && (
         <UploadScreen
           datasetSummary={datasetSummary}
@@ -838,6 +839,7 @@ export default function FraudFrogApp() {
                   setActiveIndex(0);
                   setFilters(nextFilters);
                 }}
+                totalTransactions={datasetSummary.totalTransactions}
               />
             )}
 
@@ -862,12 +864,12 @@ export default function FraudFrogApp() {
 
             {view === "swipe" && (
               <main className="w-full">
-                <div className="border-b border-zinc-200 bg-white/80 px-5 py-4 backdrop-blur sm:px-8">
+                <div className="border-b border-zinc-200 px-5 py-4 sm:px-8">
                   <div className="flex items-center justify-between">
                     <div>
                       <h1 className="text-lg font-semibold text-zinc-950">Quick Review</h1>
                       <p className="mt-0.5 text-sm text-zinc-500">
-                        Use arrow keys or swipe: right approves, left escalates, down dismisses.
+                        Swipe right to approve, left to escalate, down to defer.
                       </p>
                     </div>
                     <span className="rounded-full border border-zinc-200 bg-white px-3 py-1 text-sm font-semibold text-zinc-600 shadow-sm">
@@ -930,166 +932,136 @@ function UploadScreen({
   };
 
   return (
-    <main className="mx-auto flex min-h-screen w-full max-w-7xl flex-col px-5 py-6 sm:px-8">
-      <header className="flex items-center justify-between border-b border-zinc-200 pb-5">
-        <BrandMark />
-        <span className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-sm font-medium text-emerald-800 shadow-sm">
-          Calm RiskOps console
-        </span>
-      </header>
-
-      <section className="grid flex-1 items-center gap-8 py-10 lg:grid-cols-[1.05fr_0.95fr]">
-        <div className="max-w-3xl">
-          <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-sm font-semibold text-emerald-800">
-            <ShieldCheck className="h-4 w-4" />
-            The reviewer keeps the final say
-          </div>
-          <h1 className="text-5xl font-semibold tracking-normal text-zinc-950 sm:text-6xl">
-            FraudFrog
-          </h1>
-          <p className="mt-4 text-2xl font-medium text-zinc-700">
-            Explainable fraud review for payment teams
-          </p>
-          <p className="mt-5 max-w-2xl text-lg leading-8 text-zinc-600">
-            Leap from suspicious signal to confident decision with clear,
-            deterministic evidence.
-          </p>
-
-          <div className="mt-8 grid gap-3 sm:grid-cols-3">
-            {[
-              [number.format(datasetSummary.totalTransactions), "transactions"],
-              [number.format(datasetSummary.totalCards), "cards"],
-              [number.format(datasetSummary.patternsFound), "patterns"],
-            ].map(([value, label]) => (
-              <div
-                key={label}
-                className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm"
-              >
-                <div className="text-2xl font-semibold text-zinc-950">
-                  {value}
-                </div>
-                <div className="mt-1 text-sm font-medium text-zinc-500">
-                  {label}
-                </div>
-              </div>
-            ))}
-          </div>
+    <main className="flex min-h-screen flex-col items-center justify-center bg-[#f5f7f8] px-5 py-16">
+      {/* ── HERO: centered title + description ──────────────────────── */}
+      <div className="w-full max-w-xl text-center">
+        <div className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-sm font-semibold text-emerald-800">
+          <ShieldCheck className="h-4 w-4" />
+          The reviewer keeps the final say
         </div>
 
-        <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm">
-          <div
-            className="rounded-xl border-2 border-dashed border-emerald-200 bg-emerald-50/50 p-8 text-center transition hover:border-emerald-300"
-            onDragOver={(event) => event.preventDefault()}
-            onDrop={handleDrop}
-          >
-            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-white text-emerald-800 shadow-sm">
-              <Upload className="h-7 w-7" />
-            </div>
-            <h2 className="mt-5 text-xl font-semibold text-zinc-950">
-              Upload a transactions CSV
-            </h2>
-            <p className="mt-2 text-sm leading-6 text-zinc-600">
-              Upload a raw <span className="font-semibold">transactions.csv</span> (11 columns)
-              or the pre-scored output from{" "}
-              <span className="font-mono font-semibold">fraud_detector.py</span> to use your Python scores directly.
-            </p>
-            <input
-              accept=".csv,.tsv,text/csv,text/tab-separated-values"
-              className="sr-only"
-              onChange={handleInputChange}
-              ref={fileInputRef}
-              type="file"
-            />
-            <button
-              className="mx-auto mt-5 flex min-h-12 w-full max-w-sm items-center justify-between rounded-lg border border-zinc-200 bg-white px-4 py-3 text-left shadow-sm transition hover:bg-zinc-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-950"
-              onClick={() => fileInputRef.current?.click()}
-              type="button"
-            >
-              <div className="flex items-center gap-3">
-                <FileText className="h-5 w-5 text-zinc-500" />
-                <span className="text-sm font-semibold text-zinc-800">
-                  {selectedFileName || "Choose transactions.csv"}
-                </span>
-              </div>
-              <span className="text-xs font-semibold text-emerald-700">
-                {sourceRows.length > 0 ? "Loaded" : "Browse"}
-              </span>
-            </button>
+        <h1 className="mt-5 text-6xl font-bold tracking-tight text-zinc-950 sm:text-7xl">
+          Flagly
+        </h1>
+
+        <p className="mt-5 text-lg leading-7 text-zinc-600">
+          Upload a transactions CSV to detect suspicious cases. Flagly scores
+          each transaction and presents flagged cases one by one for your team
+          to approve, escalate, or defer.
+        </p>
+      </div>
+
+      {/* ── UPLOAD ZONE ─────────────────────────────────────────────── */}
+      <div className="mt-10 w-full max-w-xl">
+        <div
+          className="rounded-2xl border-2 border-dashed border-zinc-300 bg-white p-10 text-center transition-colors duration-200 hover:border-zinc-400"
+          onDragOver={(event) => event.preventDefault()}
+          onDrop={handleDrop}
+        >
+          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-zinc-100">
+            <Upload className="h-8 w-8 text-zinc-500" />
           </div>
-
-          {uploadError && (
-            <div className="mt-4 rounded-lg border border-red-200 bg-red-50 p-4 text-sm font-semibold text-red-800">
-              {uploadError}
-            </div>
-          )}
-
-          {sourceRows.length > 0 && !uploadError && (
-            <div className="mt-4 rounded-lg border border-emerald-200 bg-emerald-50 p-4">
-              <div className="text-sm font-semibold text-emerald-900">
-                {number.format(sourceRows.length)} valid transactions loaded
-                from {selectedFileName}.
-              </div>
-              <div className="mt-2 text-sm text-emerald-800">
-                {number.format(loadedCards)} cards found.{" "}
-                {isPythonScored
-                  ? "Python fraud scores detected - scores from fraud_detector.py will be used directly."
-                  : "Mock scoring will be applied and flagged transactions sent to review."}
-              </div>
-            </div>
-          )}
-
-          {uploadWarnings.length > 0 && (
-            <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 p-4">
-              <div className="text-sm font-semibold text-amber-950">
-                Rows skipped
-              </div>
-              <ul className="mt-2 space-y-1 text-sm text-amber-900">
-                {uploadWarnings.slice(0, 4).map((warning) => (
-                  <li key={warning}>{warning}</li>
-                ))}
-              </ul>
-            </div>
-          )}
-
-          {processing && (
-            <LoadingState
-              currentStep={processingStep}
-              steps={processingSteps}
-              title="Preparing review queue"
-            />
-          )}
-
-          <details className="mt-5 rounded-lg border border-zinc-200 bg-zinc-50 p-4">
-            <summary className="cursor-pointer text-sm font-semibold text-zinc-950">
-              Expected CSV columns ({csvInputFields.length})
-            </summary>
-            <div className="mt-3 flex flex-wrap gap-2">
-              {csvInputFields.map((field) => (
-                <span
-                  className="rounded-full border border-zinc-200 bg-white px-2.5 py-1 font-mono text-xs font-semibold text-zinc-700"
-                  key={field}
-                >
-                  {field}
-                </span>
-              ))}
-            </div>
-          </details>
-
+          <p className="mt-4 text-sm font-medium text-zinc-500">
+            Drag and drop your file here, or
+          </p>
+          <input
+            accept=".csv,.tsv,text/csv,text/tab-separated-values"
+            className="sr-only"
+            onChange={handleInputChange}
+            ref={fileInputRef}
+            type="file"
+          />
           <button
-            className="mt-6 flex min-h-12 w-full items-center justify-center gap-2 rounded-md bg-zinc-950 px-5 py-3 text-base font-semibold text-white shadow-sm transition hover:bg-zinc-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-950 disabled:cursor-not-allowed disabled:bg-zinc-400"
-            disabled={processing || sourceRows.length === 0}
-            onClick={onProcess}
+            className="mx-auto mt-4 flex min-h-12 w-full items-center justify-between rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-left transition-colors duration-200 hover:bg-zinc-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-950"
+            onClick={() => fileInputRef.current?.click()}
             type="button"
           >
-            {processing ? (
-              <Loader2 className="h-5 w-5 animate-spin" />
-            ) : (
-              <Database className="h-5 w-5" />
-            )}
-            Process Transactions
+            <div className="flex items-center gap-3">
+              <FileText className="h-5 w-5 text-zinc-500" />
+              <span className="text-sm font-semibold text-zinc-800">
+                {selectedFileName || "Choose transactions.csv"}
+              </span>
+            </div>
+            <span className={`text-xs font-bold ${sourceRows.length > 0 ? "text-emerald-600" : "text-zinc-400"}`}>
+              {sourceRows.length > 0 ? "Loaded" : "Browse"}
+            </span>
           </button>
         </div>
-      </section>
+
+        {/* Error */}
+        {uploadError && (
+          <div className="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-800">
+            {uploadError}
+          </div>
+        )}
+
+        {/* Success summary */}
+        {sourceRows.length > 0 && !uploadError && (
+          <div className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3">
+            <p className="text-sm font-semibold text-emerald-900">
+              {number.format(sourceRows.length)} transactions · {number.format(loadedCards)} cards loaded from {selectedFileName}.
+            </p>
+            <p className="mt-1 text-sm text-emerald-700">
+              {isPythonScored
+                ? "Python fraud scores detected — scores will be used directly."
+                : "Mock scoring will be applied; flagged cases sent to review."}
+            </p>
+          </div>
+        )}
+
+        {/* Warnings */}
+        {uploadWarnings.length > 0 && (
+          <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
+            <p className="text-sm font-semibold text-amber-950">Rows skipped</p>
+            <ul className="mt-1.5 space-y-1 text-sm text-amber-800">
+              {uploadWarnings.slice(0, 4).map((warning) => (
+                <li key={warning}>{warning}</li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {/* Processing */}
+        {processing && (
+          <LoadingState
+            currentStep={processingStep}
+            steps={processingSteps}
+            title="Preparing review queue"
+          />
+        )}
+
+        {/* Process CTA */}
+        <button
+          className="mt-5 flex min-h-13 w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-zinc-950 px-5 py-3.5 text-base font-semibold text-white shadow-sm transition-colors duration-200 hover:bg-zinc-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-950 disabled:cursor-not-allowed disabled:bg-zinc-300 disabled:text-zinc-500"
+          disabled={processing || sourceRows.length === 0}
+          onClick={onProcess}
+          type="button"
+        >
+          {processing ? (
+            <Loader2 className="h-5 w-5 animate-spin" />
+          ) : (
+            <Database className="h-5 w-5" />
+          )}
+          {processing ? "Analysing…" : "Analyse Transactions"}
+        </button>
+
+        {/* Expected columns (collapsible, low visual weight) */}
+        <details className="mt-5 rounded-xl border border-zinc-200 bg-white px-4 py-3">
+          <summary className="cursor-pointer text-sm font-medium text-zinc-500 hover:text-zinc-700">
+            Expected CSV columns ({csvInputFields.length})
+          </summary>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {csvInputFields.map((field) => (
+              <span
+                className="rounded-full border border-zinc-200 bg-zinc-50 px-2.5 py-1 font-mono text-xs font-semibold text-zinc-600"
+                key={field}
+              >
+                {field}
+              </span>
+            ))}
+          </div>
+        </details>
+      </div>
     </main>
   );
 }
@@ -1131,7 +1103,7 @@ function Dashboard({
       fraudCase.severity === "High" || fraudCase.severity === "Critical",
   ).length;
 
-  const categoryColors = ["#0f9f86", "#2563eb", "#f59e0b", "#64748b", "#ef4444", "#0891b2", "#f97316"];
+  const categoryColors = ["#0ea5e9","#8b5cf6","#f59e0b","#10b981","#ef4444","#06b6d4","#f97316"];
   const categoryData = Object.entries(countBy(allScoredCases, "merchant_category"))
     .sort((a, b) => b[1] - a[1])
     .slice(0, 7)
@@ -1286,8 +1258,9 @@ function Dashboard({
           <p className="mt-2 text-sm leading-6 text-zinc-600">
             {auditEntries.length === 0
               ? "No review actions yet."
-              : `${auditEntries.length} decision${auditEntries.length === 1 ? "" : "s"
-              } recorded. ${escalatedCount} escalated.`}
+              : `${auditEntries.length} decision${
+                  auditEntries.length === 1 ? "" : "s"
+                } recorded. ${escalatedCount} escalated.`}
           </p>
           <p className="mt-2 text-sm text-zinc-500">
             {reviewedCount} of {cases.length} current cases reviewed.
@@ -1331,6 +1304,7 @@ function ReviewQueue({
   searchTerm,
   sensitivity,
   setFilters,
+  totalTransactions,
 }: {
   activeIndex: number;
   activeTab: DetailTab;
@@ -1356,6 +1330,7 @@ function ReviewQueue({
   searchTerm: string;
   sensitivity: SensitivityMode;
   setFilters: Dispatch<SetStateAction<FiltersState>>;
+  totalTransactions: number;
 }) {
   return (
     <main className="mx-auto min-h-screen w-full max-w-[1500px] px-4 py-5 sm:px-6">
@@ -1427,10 +1402,11 @@ function ReviewQueue({
             {(["Conservative", "Balanced", "Aggressive"] as SensitivityMode[]).map(
               (mode) => (
                 <button
-                  className={`min-h-7 cursor-pointer rounded px-2.5 text-xs font-medium transition-colors duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-950 ${sensitivity === mode
+                  className={`min-h-7 cursor-pointer rounded px-2.5 text-xs font-medium transition-colors duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-950 ${
+                    sensitivity === mode
                       ? "bg-zinc-950 text-white"
                       : "border border-zinc-200 bg-white text-zinc-600 hover:bg-zinc-50"
-                    }`}
+                  }`}
                   key={mode}
                   onClick={() => onSensitivityChange(mode)}
                   type="button"
@@ -1513,7 +1489,7 @@ function TransactionReviewCard({
 
   return (
     <article className="overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-sm">
-      <div className="border-b border-zinc-200 bg-zinc-50/80 p-5">
+      <div className="border-b border-zinc-200 p-5">
         <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
           <div>
             <p className="text-sm font-semibold text-zinc-500">
@@ -1523,7 +1499,7 @@ function TransactionReviewCard({
               {fraudCase.severity} Risk - {fraudCase.fraud_score}/100
             </h2>
             <p className="mt-2 text-base font-medium text-zinc-600">
-              Suspected pattern: {patternTitle}
+              Pattern: {patternTitle}
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -1544,7 +1520,7 @@ function TransactionReviewCard({
           ))}
         </div>
 
-        <div className="mt-5 grid gap-4 rounded-xl border border-zinc-200 bg-zinc-50 p-4 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="mt-5 grid gap-4 rounded-xl bg-zinc-50 p-4 sm:grid-cols-2 xl:grid-cols-4">
           <Fact label="Transaction ID" value={fraudCase.transaction_id} />
           <Fact label="Amount" value={money.format(fraudCase.amount)} strong />
           <Fact label="Merchant" value={fraudCase.merchant_name} />
@@ -1559,7 +1535,7 @@ function TransactionReviewCard({
           <ReasonList reasons={fraudCase.reasons.slice(0, 3)} />
         </div>
 
-        <details className="mt-4 rounded-xl border border-zinc-200 bg-zinc-50/80 p-4">
+        <details className="mt-4 rounded-xl border border-zinc-200 bg-white p-4">
           <summary className="cursor-pointer text-sm font-semibold text-zinc-800">
             Transaction details
           </summary>
@@ -1656,10 +1632,11 @@ function EvidencePanel({
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 xl:grid-cols-2">
           {tabs.map((tab) => (
             <button
-              className={`min-h-10 rounded-md px-3 text-sm font-semibold transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-950 ${activeTab === tab
+              className={`min-h-10 rounded-md px-3 text-sm font-semibold transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-950 ${
+                activeTab === tab
                   ? "bg-zinc-950 text-white"
                   : "bg-zinc-50 text-zinc-700 hover:bg-zinc-100"
-                }`}
+              }`}
               key={tab}
               onClick={() => onTabChange(tab)}
               type="button"
@@ -1828,14 +1805,15 @@ function FraudTimeline({ fraudCase }: { fraudCase: FraudCase }) {
         {fraudCase.timeline.map((event) => (
           <li className="relative pl-8" key={`${event.time}-${event.label}`}>
             <span
-              className={`absolute left-0 top-1 flex h-4 w-4 items-center justify-center rounded-full border ${event.type === "normal"
+              className={`absolute left-0 top-1 flex h-4 w-4 items-center justify-center rounded-full border ${
+                event.type === "normal"
                   ? "border-emerald-300 bg-emerald-50"
                   : event.type === "critical"
                     ? "border-red-300 bg-red-50"
                     : event.type === "review"
                       ? "border-sky-300 bg-sky-50"
                       : "border-amber-300 bg-amber-50"
-                }`}
+              }`}
             >
               <span className="h-1.5 w-1.5 rounded-full bg-current text-zinc-700" />
             </span>
@@ -2027,10 +2005,11 @@ function SearchFilters({
 
         <button
           aria-expanded={filtersOpen}
-          className={`inline-flex min-h-9 cursor-pointer items-center gap-1.5 rounded-md border px-3 text-sm font-medium transition-colors duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-950 ${filtersOpen || advancedActiveCount > 0
+          className={`inline-flex min-h-9 cursor-pointer items-center gap-1.5 rounded-md border px-3 text-sm font-medium transition-colors duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-950 ${
+            filtersOpen || advancedActiveCount > 0
               ? "border-zinc-900 bg-zinc-950 text-white"
               : "border-zinc-200 bg-white text-zinc-700 hover:bg-zinc-50"
-            }`}
+          }`}
           onClick={() => setFiltersOpen((open) => !open)}
           ref={filterButtonRef}
           title="Press F to toggle filters"
@@ -2040,15 +2019,17 @@ function SearchFilters({
           Filters
           {advancedActiveCount > 0 && (
             <span
-              className={`rounded-full px-1.5 py-0.5 text-xs font-semibold ${filtersOpen ? "bg-white/20 text-white" : "bg-zinc-950 text-white"
-                }`}
+              className={`rounded-full px-1.5 py-0.5 text-xs font-semibold ${
+                filtersOpen ? "bg-white/20 text-white" : "bg-zinc-950 text-white"
+              }`}
             >
               {advancedActiveCount}
             </span>
           )}
           <ChevronDown
-            className={`h-3.5 w-3.5 transition-transform duration-200 motion-reduce:transition-none ${filtersOpen ? "rotate-180" : ""
-              }`}
+            className={`h-3.5 w-3.5 transition-transform duration-200 motion-reduce:transition-none ${
+              filtersOpen ? "rotate-180" : ""
+            }`}
           />
         </button>
 
@@ -2066,8 +2047,9 @@ function SearchFilters({
 
       {/* Progressive disclosure: advanced filters panel */}
       <div
-        className={`grid transition-[grid-template-rows] duration-300 motion-reduce:duration-0 ${filtersOpen ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
-          }`}
+        className={`grid transition-[grid-template-rows] duration-300 motion-reduce:duration-0 ${
+          filtersOpen ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
+        }`}
       >
         <div className="overflow-hidden">
           <div className="mt-3 grid gap-3 rounded-lg border border-zinc-200 bg-zinc-50/80 p-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -2150,10 +2132,11 @@ function SensitivityControl({
         {(["Conservative", "Balanced", "Aggressive"] as SensitivityMode[]).map(
           (mode) => (
             <button
-              className={`min-h-10 rounded-md px-3 text-sm font-semibold transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-950 ${sensitivity === mode
+              className={`min-h-10 rounded-md px-3 text-sm font-semibold transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-950 ${
+                sensitivity === mode
                   ? "bg-zinc-950 text-white"
                   : "border border-zinc-200 bg-white text-zinc-700 hover:bg-zinc-50"
-                }`}
+              }`}
               key={mode}
               onClick={() => onChange(mode)}
               type="button"
@@ -2375,17 +2358,17 @@ function KeyboardShortcutHelp() {
   return (
     <section className="flex flex-wrap items-center gap-2">
       <span className="text-sm font-semibold text-zinc-800">Shortcuts</span>
-      {shortcuts.map(([key, label]) => (
-        <div
-          className="flex items-center gap-2 rounded-full border border-zinc-200 bg-zinc-50 px-2.5 py-1 text-xs"
-          key={`${key}-${label}`}
-        >
-          <kbd className="font-mono font-semibold text-zinc-800">
-            {key}
-          </kbd>
-          <span className="text-zinc-500">{label}</span>
-        </div>
-      ))}
+        {shortcuts.map(([key, label]) => (
+          <div
+            className="flex items-center gap-2 rounded-full border border-zinc-200 bg-zinc-50 px-2.5 py-1 text-xs"
+            key={`${key}-${label}`}
+          >
+            <kbd className="font-mono font-semibold text-zinc-800">
+              {key}
+            </kbd>
+            <span className="text-zinc-500">{label}</span>
+          </div>
+        ))}
     </section>
   );
 }
@@ -2405,7 +2388,7 @@ function DistributionPanel({
   const max = Math.max(...rows.map(([, value]) => value), 1);
 
   return (
-    <section className="flex flex-col rounded-xl border border-zinc-200 bg-white p-6 shadow-sm">
+    <section className="flex flex-col">
       <h2 className="text-sm font-semibold text-zinc-950">{title}</h2>
       <div className="mt-4 space-y-3">
         {rows.map(([label, value]) => (
@@ -2437,12 +2420,12 @@ function MetricCard({
   value: string;
 }) {
   return (
-    <div className="flex min-h-28 flex-col justify-between rounded-xl border border-zinc-200 bg-white p-5 shadow-sm">
+    <div className="flex flex-col">
       <div className="flex items-center gap-2 text-zinc-500">
-        <Icon className="h-4 w-4 text-emerald-700" />
+        <Icon className="h-4 w-4" />
         <span className="text-sm font-medium">{label}</span>
       </div>
-      <div className="mt-3 text-3xl font-semibold tracking-tight text-zinc-950">{value}</div>
+      <div className="mt-2 text-3xl font-medium tracking-tight text-zinc-950">{value}</div>
     </div>
   );
 }
@@ -2489,7 +2472,7 @@ function ReviewActionButton({
 
 function SeverityBadge({ severity }: { severity: Severity }) {
   const className: Record<Severity, string> = {
-    Low: "border-slate-200 bg-slate-50 text-slate-700",
+    Low: "border-emerald-200 bg-emerald-50 text-emerald-800",
     Medium: "border-amber-200 bg-amber-50 text-amber-900",
     High: "border-orange-200 bg-orange-50 text-orange-900",
     Critical: "border-red-200 bg-red-50 text-red-800",
@@ -2715,7 +2698,7 @@ function AppHeader({
     <header className="flex flex-col gap-4 border-b border-zinc-200 pb-4 lg:flex-row lg:items-center lg:justify-between">
       <div className="flex flex-wrap items-center gap-3">
         {!hideBrand && <BrandMark />}
-        <span className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-sm font-semibold text-emerald-800 shadow-sm">
+        <span className="rounded-full border border-zinc-200 bg-white px-3 py-1 text-sm font-semibold text-zinc-600 shadow-sm">
           {mode}
         </span>
       </div>
@@ -2724,26 +2707,15 @@ function AppHeader({
   );
 }
 
-function FrogShieldMark({ compact = false }: { compact?: boolean }) {
-  return (
-    <div
-      className={`${compact ? "h-8 w-8 rounded-lg" : "h-10 w-10 rounded-xl"} relative flex shrink-0 items-center justify-center bg-zinc-950 text-white shadow-sm`}
-      aria-hidden="true"
-    >
-      <span className="absolute -top-0.5 left-2 h-1.5 w-1.5 rounded-full bg-emerald-200" />
-      <span className="absolute -top-0.5 right-2 h-1.5 w-1.5 rounded-full bg-emerald-200" />
-      <ShieldCheck className={compact ? "h-4 w-4" : "h-5 w-5"} />
-    </div>
-  );
-}
-
 function BrandMark() {
   return (
     <div className="flex items-center gap-3">
-      <FrogShieldMark />
+      <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-zinc-950 text-white shadow-sm">
+        <ShieldAlert className="h-5 w-5" />
+      </div>
       <div>
         <div className="text-xl font-semibold tracking-normal text-zinc-950">
-          FraudFrog
+          Flagly
         </div>
         <div className="text-sm font-medium text-zinc-500">
           Explainable fraud review
@@ -2773,10 +2745,12 @@ function Sidebar({
   return (
     <aside className="sticky top-0 flex h-screen w-56 shrink-0 flex-col border-r border-zinc-200 bg-white">
       <div className="flex items-center gap-2.5 border-b border-zinc-200 px-4 py-4">
-        <FrogShieldMark compact />
+        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-zinc-950 text-white">
+          <ShieldAlert className="h-4 w-4" />
+        </div>
         <div>
-          <div className="text-sm font-semibold text-zinc-950">FraudFrog</div>
-          <div className="text-xs text-zinc-500">RiskOps review</div>
+          <div className="text-sm font-semibold text-zinc-950">Flagly</div>
+          <div className="text-xs text-zinc-500">Fraud review</div>
         </div>
       </div>
 
@@ -2836,10 +2810,11 @@ function NavItem({
   return (
     <button
       aria-current={active ? "page" : undefined}
-      className={`flex w-full cursor-pointer items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-950 ${active
+      className={`flex w-full cursor-pointer items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-950 ${
+        active
           ? "bg-zinc-950 text-white"
-          : "text-zinc-700 hover:bg-emerald-50 hover:text-zinc-950"
-        }`}
+          : "text-zinc-700 hover:bg-zinc-100 hover:text-zinc-950"
+      }`}
       onClick={onClick}
       type="button"
     >
@@ -2847,8 +2822,9 @@ function NavItem({
       <span className="flex-1 text-left">{label}</span>
       {badge != null && badge > 0 && (
         <span
-          className={`rounded-full px-2 py-0.5 text-xs font-semibold ${active ? "bg-white/20 text-white" : "bg-zinc-100 text-zinc-600"
-            }`}
+          className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
+            active ? "bg-white/20 text-white" : "bg-zinc-100 text-zinc-600"
+          }`}
         >
           {badge}
         </span>
@@ -2868,7 +2844,7 @@ function PanelTitle({
 }) {
   return (
     <div className="flex items-start gap-3">
-      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-emerald-50 text-emerald-800">
+      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-zinc-100 text-zinc-700">
         <Icon className="h-5 w-5" />
       </div>
       <div>
@@ -3043,31 +3019,7 @@ function PieChart({
   const cy = 80;
   const outerR = 68;
   const innerR = 40;
-  const chartSegments =
-    total === 0
-      ? []
-      : data.reduce<{
-        endAngle: number;
-        segments: Array<{ color: string; label: string; path: string; value: number }>;
-      }>(
-        (accumulator, segment) => {
-          const angle = (segment.value / total) * 360;
-          const startAngle = accumulator.endAngle;
-          const endAngle = startAngle + angle;
-
-          return {
-            endAngle,
-            segments: [
-              ...accumulator.segments,
-              {
-                ...segment,
-                path: donutSlicePath(cx, cy, outerR, innerR, startAngle, endAngle),
-              },
-            ],
-          };
-        },
-        { endAngle: -90, segments: [] },
-      ).segments;
+  let cumAngle = -90;
 
   return (
     <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm">
@@ -3078,14 +3030,17 @@ function PieChart({
 
       {total === 0 ? (
         <div className="mt-5 flex h-32 items-center justify-center rounded-lg bg-zinc-50 text-sm text-zinc-400">
-          No data yet - upload a CSV to see this chart.
+          No data yet — upload a CSV to see this chart.
         </div>
       ) : (
         <div className="mt-5 flex flex-col items-center gap-6 sm:flex-row">
           <svg className="shrink-0" height={160} viewBox="0 0 160 160" width={160}>
-            {chartSegments.map((segment) => (
-              <path d={segment.path} fill={segment.color} key={segment.label} />
-            ))}
+            {data.map((segment) => {
+              const angle = (segment.value / total) * 360;
+              const path = donutSlicePath(cx, cy, outerR, innerR, cumAngle, cumAngle + angle);
+              cumAngle += angle;
+              return <path d={path} fill={segment.color} key={segment.label} />;
+            })}
             <text
               dominantBaseline="middle"
               fill="#09090b"
