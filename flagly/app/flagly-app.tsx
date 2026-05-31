@@ -60,6 +60,7 @@ import {
   FraudSwipeStack,
   type SwipeSessionStats,
 } from "@/components/ui/fraud-swipe-stack";
+import { GooeyText } from "@/components/ui/gooey-text-morphing";
 import { GridScan } from "@/components/ui/GridScan";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 
@@ -316,7 +317,7 @@ function getSensitivitySummary(
   return `Balanced mode flags ${flaggedCount} of ${totalTransactions} transactions and keeps precision and recall even.`;
 }
 
-export default function FlaglyApp() {
+export default function FraudFrogApp() {
   const [view, setView] = useState<View>("upload");
   const [processing, setProcessing] = useState(false);
   const [processingStep, setProcessingStep] = useState(0);
@@ -983,12 +984,18 @@ function UploadScreen({
           The reviewer keeps the final say
         </div>
 
-        <h1 className="mt-5 text-6xl font-bold tracking-tight text-white sm:text-7xl">
-          Flagly
+        <h1 className="mt-14">
+          <GooeyText
+            texts={["FraudFrog", "Detect Fraud", "Flag Threats", "Protect the Pool", "FraudFrog"]}
+            morphTime={1.2}
+            cooldownTime={2.5}
+            className="h-20"
+            textClassName="text-6xl sm:text-7xl font-bold tracking-tight text-white"
+          />
         </h1>
 
         <p className="mt-5 text-lg leading-7 text-zinc-400">
-          Upload a transactions CSV to detect suspicious cases. Flagly scores
+          Upload a transactions CSV to detect suspicious cases. FraudFrog scores
           each transaction and presents flagged cases one by one for your team
           to approve, escalate, or defer.
         </p>
@@ -2750,18 +2757,32 @@ function AppHeader({
   );
 }
 
+function FrogIcon({ size = 40 }: { size?: number }) {
+  return (
+    <div
+      className="flex shrink-0 items-center justify-center rounded-full bg-white shadow-sm ring-1 ring-zinc-200 overflow-hidden"
+      style={{ width: size, height: size }}
+    >
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src="/app-logo.png"
+        alt="FraudFrog logo"
+        style={{ width: size * 0.82, height: size * 0.82, objectFit: "contain", marginLeft: size * 0.06 }}
+      />
+    </div>
+  );
+}
+
 function BrandMark() {
   return (
     <div className="flex items-center gap-3">
-      <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-zinc-950 text-white shadow-sm">
-        <ShieldAlert className="h-5 w-5" />
-      </div>
+      <FrogIcon size={40} />
       <div>
         <div className="text-xl font-semibold tracking-normal text-zinc-950">
-          Flagly
+          FraudFrog
         </div>
         <div className="text-sm font-medium text-zinc-500">
-          Explainable fraud review
+          Leap Ahead of Fraud
         </div>
       </div>
     </div>
@@ -2788,12 +2809,10 @@ function Sidebar({
   return (
     <aside className="sticky top-0 flex h-screen w-56 shrink-0 flex-col border-r border-zinc-200 bg-white">
       <div className="flex items-center gap-2.5 border-b border-zinc-200 px-4 py-4">
-        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-zinc-950 text-white">
-          <ShieldAlert className="h-4 w-4" />
-        </div>
+        <FrogIcon size={34} />
         <div>
-          <div className="text-sm font-semibold text-zinc-950">Flagly</div>
-          <div className="text-xs text-zinc-500">Fraud review</div>
+          <div className="text-sm font-semibold text-zinc-950">FraudFrog</div>
+          <div className="text-xs text-zinc-500">Leap Ahead of Fraud</div>
         </div>
       </div>
 
