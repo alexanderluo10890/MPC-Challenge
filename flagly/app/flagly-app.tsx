@@ -1031,10 +1031,13 @@ export default function FraudFrogApp() {
               {view === "complete" && (
                 <CompletionState
                   auditEntries={auditEntries}
+                  casesWithStatuses={casesWithStatuses}
+                  datasetSummary={datasetSummary}
                   onExport={handleExport}
                   onGoAudit={() => setView("audit")}
                   onReviewAgain={() => setView("review")}
                   onUndo={handleUndo}
+                  totalTransactions={datasetSummary.totalTransactions}
                 />
               )}
 
@@ -2584,41 +2587,62 @@ function AuditLog({
 }
 
 function CompletionState({
-  auditEntries,
+  casesWithStatuses,
+  datasetSummary,
   onExport,
   onGoAudit,
   onReviewAgain,
   onUndo,
+  totalTransactions,
 }: {
   auditEntries: AuditEntry[];
+  casesWithStatuses: FraudCase[];
+  datasetSummary: DatasetSummary;
   onExport: () => void;
   onGoAudit: () => void;
   onReviewAgain: () => void;
   onUndo: () => void;
+  totalTransactions: number;
 }) {
+  const escalated = casesWithStatuses.filter((c) => c.review_status === "escalated_fraud");
+  const approved = casesWithStatuses.filter((c) => c.review_status === "approved_legitimate");
+  const dismissed = casesWithStatuses.filter((c) => c.review_status === "dismissed_flag");
+  const totalFraudValue = escalated.reduce((sum, c) => sum + c.amount, 0);
+  const totalCleanValue = approved.reduce((sum, c) => sum + c.amount, 0);
+  const totalDismissedValue = dismissed.reduce((sum, c) => sum + c.amount, 0);
+
+  const decisionData = [
+    { label: "Confirmed fraud", value: escalated.length, color: "#ef4444" },
+    { label: "Approved clean", value: approved.length, color: "#10b981" },
+    { label: "Dismissed flag", value: dismissed.length, color: "#94a3b8" },
+  ].filter((d) => d.value > 0);
+
   return (
-    <main className="mx-auto flex min-h-screen w-full max-w-4xl items-center px-5 py-8">
-      <section className="w-full rounded-lg border border-zinc-200 bg-white p-8 text-center shadow-sm">
-        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-emerald-50 text-emerald-700">
-          <CheckCircle2 className="h-8 w-8" />
+    <main className="mx-auto w-full max-w-6xl px-5 py-8 sm:px-8">
+
+      {/* Header */}
+      <div className="mb-6 flex flex-col gap-4 border-b border-zinc-200 pb-6 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <div className="mb-3 inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
+            <CheckCircle2 className="h-3.5 w-3.5" />
+            Review complete
+          </div>
+          <h1 className="text-3xl font-bold tracking-tight text-zinc-950">Session Report</h1>
+          <p className="mt-1.5 text-sm text-zinc-500">
+            {datasetSummary.fileName} · {number.format(totalTransactions)} total transactions · {number.format(casesWithStatuses.length)} flagged cases reviewed
+          </p>
         </div>
-        <h1 className="mt-5 text-4xl font-semibold tracking-normal text-zinc-950">
-          Review complete.
-        </h1>
-        <p className="mx-auto mt-3 max-w-2xl text-base leading-7 text-zinc-600">
-          Export your updated CSV or inspect the audit log.
-        </p>
-        <div className="mt-6 grid gap-3 sm:grid-cols-4">
+        <div className="flex shrink-0 flex-wrap gap-2">
           <button
-            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-md bg-emerald-600 px-4 text-sm font-semibold text-white shadow-sm hover:bg-emerald-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600"
+            className="inline-flex min-h-10 items-center gap-2 rounded-md bg-emerald-600 px-4 text-sm font-semibold text-white shadow-sm hover:bg-emerald-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600"
             onClick={onExport}
             type="button"
           >
             <Download className="h-4 w-4" />
-            Export CSV
+            Export Report
           </button>
           <button
-            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-md border border-zinc-200 bg-white px-4 text-sm font-semibold text-zinc-800 shadow-sm hover:bg-zinc-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-950"
+            className="inline-flex min-h-10 items-center gap-2 rounded-md border border-zinc-200 bg-white px-4 text-sm font-semibold text-zinc-800 shadow-sm hover:bg-zinc-50"
             onClick={onGoAudit}
             type="button"
           >
@@ -2626,27 +2650,178 @@ function CompletionState({
             Audit Log
           </button>
           <button
-            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-md border border-zinc-200 bg-white px-4 text-sm font-semibold text-zinc-800 shadow-sm hover:bg-zinc-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-950"
-            onClick={onReviewAgain}
-            type="button"
-          >
-            <ShieldAlert className="h-4 w-4" />
-            Review Queue
-          </button>
-          <button
-            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-md border border-zinc-200 bg-white px-4 text-sm font-semibold text-zinc-800 shadow-sm hover:bg-zinc-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-950"
+            className="inline-flex min-h-10 items-center gap-2 rounded-md border border-zinc-200 bg-white px-4 text-sm font-semibold text-zinc-800 shadow-sm hover:bg-zinc-50"
             onClick={onUndo}
             type="button"
           >
             <RotateCcw className="h-4 w-4" />
-            Undo
+            Undo Last
           </button>
         </div>
-        <p className="mt-5 text-sm font-medium text-zinc-500">
-          {auditEntries.length} audit decision
-          {auditEntries.length === 1 ? "" : "s"} recorded.
-        </p>
+      </div>
+
+      {/* Summary stats */}
+      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="rounded-xl border border-zinc-200 bg-white p-5 shadow-sm">
+          <p className="text-sm font-medium text-zinc-500">Total reviewed</p>
+          <p className="mt-2 text-3xl font-bold text-zinc-950">{number.format(casesWithStatuses.length)}</p>
+          <p className="mt-1 text-xs text-zinc-400">of {number.format(totalTransactions)} transactions</p>
+        </div>
+        <div className="rounded-xl border border-red-200 bg-red-50 p-5 shadow-sm">
+          <p className="text-sm font-medium text-red-700">Confirmed fraud</p>
+          <p className="mt-2 text-3xl font-bold text-red-900">{number.format(escalated.length)}</p>
+          <p className="mt-1 text-xs text-red-600">{money.format(totalFraudValue)} total value</p>
+        </div>
+        <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-5 shadow-sm">
+          <p className="text-sm font-medium text-emerald-700">Approved clean</p>
+          <p className="mt-2 text-3xl font-bold text-emerald-900">{number.format(approved.length)}</p>
+          <p className="mt-1 text-xs text-emerald-600">{money.format(totalCleanValue)} total value</p>
+        </div>
+        <div className="rounded-xl border border-zinc-200 bg-white p-5 shadow-sm">
+          <p className="text-sm font-medium text-zinc-500">Dismissed flags</p>
+          <p className="mt-2 text-3xl font-bold text-zinc-950">{number.format(dismissed.length)}</p>
+          <p className="mt-1 text-xs text-zinc-400">false positives</p>
+        </div>
       </section>
+
+      {/* Charts + financial impact */}
+      <section className="mt-5 grid gap-5 lg:grid-cols-2">
+        <PieChart
+          data={decisionData}
+          title="Review decisions"
+          subtitle="Breakdown of reviewer decisions across all flagged cases."
+        />
+        <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm">
+          <h2 className="text-lg font-semibold text-zinc-950">Financial impact</h2>
+          <p className="mt-1 text-sm text-zinc-500">Transaction value totals by reviewer decision.</p>
+          <div className="mt-5 space-y-3">
+            <div className="flex items-center justify-between rounded-lg border border-red-200 bg-red-50 px-4 py-3">
+              <div className="flex items-center gap-2">
+                <span className="h-2.5 w-2.5 rounded-full bg-red-500" />
+                <span className="text-sm font-semibold text-red-900">Confirmed fraud</span>
+              </div>
+              <span className="text-base font-bold text-red-900">{money.format(totalFraudValue)}</span>
+            </div>
+            <div className="flex items-center justify-between rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3">
+              <div className="flex items-center gap-2">
+                <span className="h-2.5 w-2.5 rounded-full bg-emerald-500" />
+                <span className="text-sm font-semibold text-emerald-900">Approved clean</span>
+              </div>
+              <span className="text-base font-bold text-emerald-900">{money.format(totalCleanValue)}</span>
+            </div>
+            <div className="flex items-center justify-between rounded-lg bg-zinc-50 px-4 py-3">
+              <div className="flex items-center gap-2">
+                <span className="h-2.5 w-2.5 rounded-full bg-zinc-400" />
+                <span className="text-sm font-semibold text-zinc-700">Dismissed (false positives)</span>
+              </div>
+              <span className="text-base font-bold text-zinc-700">{money.format(totalDismissedValue)}</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Confirmed fraud cases */}
+      <section className="mt-8">
+        <div className="mb-4">
+          <h2 className="flex items-center gap-2 text-xl font-bold text-zinc-950">
+            Confirmed Fraud
+            <span className="rounded-full bg-red-100 px-2.5 py-0.5 text-sm font-semibold text-red-700">
+              {escalated.length}
+            </span>
+          </h2>
+          <p className="mt-1 text-sm text-zinc-500">Transactions escalated as confirmed fraud by the reviewer.</p>
+        </div>
+        {escalated.length === 0 ? (
+          <div className="rounded-xl border border-dashed border-zinc-300 bg-white p-8 text-center">
+            <p className="text-sm text-zinc-500">No transactions were escalated as fraud.</p>
+          </div>
+        ) : (
+          <div className="overflow-hidden rounded-xl border border-red-200 bg-white shadow-sm">
+            <div className="hidden grid-cols-[1fr_110px_130px_70px_110px] gap-3 border-b border-red-100 bg-red-50 px-5 py-3 text-xs font-semibold uppercase tracking-wide text-red-700 sm:grid">
+              <span>Transaction / Merchant</span>
+              <span>Amount</span>
+              <span>Card</span>
+              <span>Score</span>
+              <span>Severity</span>
+            </div>
+            <div className="divide-y divide-zinc-100">
+              {escalated.map((c) => (
+                <div
+                  key={c.transaction_id}
+                  className="grid grid-cols-1 gap-2 px-5 py-4 transition-colors hover:bg-red-50/40 sm:grid-cols-[1fr_110px_130px_70px_110px] sm:items-center sm:gap-3"
+                >
+                  <div>
+                    <p className="text-sm font-semibold text-zinc-950">{c.transaction_id}</p>
+                    <p className="mt-0.5 text-xs text-zinc-500">{c.merchant_name} · {titleCase(c.merchant_category)}</p>
+                    <div className="mt-1.5 flex flex-wrap gap-1">
+                      {c.detected_patterns.slice(0, 2).map((p) => (
+                        <span key={p} className="rounded-full border border-red-200 bg-red-50 px-2 py-0.5 text-xs font-medium text-red-700">
+                          {formatPattern(p)}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                  <span className="text-sm font-bold text-zinc-950">{money.format(c.amount)}</span>
+                  <span className="truncate font-mono text-xs text-zinc-500">{c.card_id}</span>
+                  <span className="text-sm font-bold text-red-700">{c.fraud_score}</span>
+                  <SeverityBadge severity={c.severity} />
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </section>
+
+      {/* Approved clean cases */}
+      <section className="mt-8 pb-10">
+        <details open={approved.length <= 5}>
+          <summary className="mb-4 flex cursor-pointer list-none items-start justify-between gap-4">
+            <div>
+              <h2 className="flex items-center gap-2 text-xl font-bold text-zinc-950">
+                Approved Clean
+                <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 text-sm font-semibold text-emerald-700">
+                  {approved.length}
+                </span>
+              </h2>
+              <p className="mt-1 text-sm text-zinc-500">Transactions approved as legitimate by the reviewer.</p>
+            </div>
+            <ChevronDown className="mt-1 h-5 w-5 shrink-0 text-zinc-400" />
+          </summary>
+          {approved.length === 0 ? (
+            <div className="rounded-xl border border-dashed border-zinc-300 bg-white p-8 text-center">
+              <p className="text-sm text-zinc-500">No transactions were approved as clean.</p>
+            </div>
+          ) : (
+            <div className="overflow-hidden rounded-xl border border-emerald-200 bg-white shadow-sm">
+              <div className="hidden grid-cols-[1fr_110px_130px_70px_110px] gap-3 border-b border-emerald-100 bg-emerald-50 px-5 py-3 text-xs font-semibold uppercase tracking-wide text-emerald-700 sm:grid">
+                <span>Transaction / Merchant</span>
+                <span>Amount</span>
+                <span>Card</span>
+                <span>Score</span>
+                <span>Severity</span>
+              </div>
+              <div className="divide-y divide-zinc-100">
+                {approved.map((c) => (
+                  <div
+                    key={c.transaction_id}
+                    className="grid grid-cols-1 gap-2 px-5 py-4 transition-colors hover:bg-emerald-50/40 sm:grid-cols-[1fr_110px_130px_70px_110px] sm:items-center sm:gap-3"
+                  >
+                    <div>
+                      <p className="text-sm font-semibold text-zinc-950">{c.transaction_id}</p>
+                      <p className="mt-0.5 text-xs text-zinc-500">{c.merchant_name} · {titleCase(c.merchant_category)}</p>
+                    </div>
+                    <span className="text-sm font-semibold text-zinc-950">{money.format(c.amount)}</span>
+                    <span className="truncate font-mono text-xs text-zinc-500">{c.card_id}</span>
+                    <span className="text-sm font-semibold text-zinc-600">{c.fraud_score}</span>
+                    <SeverityBadge severity={c.severity} />
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </details>
+      </section>
+
     </main>
   );
 }
