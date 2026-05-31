@@ -120,6 +120,12 @@ const money = new Intl.NumberFormat("en-US", {
 
 const number = new Intl.NumberFormat("en-US");
 
+// localStorage keys for session persistence. Data (the uploaded/scored rows) is
+// kept separate from the lighter session state (decisions, view) so a review
+// action doesn't re-serialize the whole dataset.
+const STORAGE_DATA_KEY = "fraudfrog.data.v1";
+const STORAGE_SESSION_KEY = "fraudfrog.session.v1";
+
 const defaultFilters: FiltersState = {
   severity: "All",
   status: "All",
@@ -418,8 +424,8 @@ export default function FraudFrogApp() {
   const [sensitivity, setSensitivity] =
     useState<SensitivityMode>("Balanced");
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
-  const [swipeStats, setSwipeStats] = useState<SwipeSessionStats>({ approved: 0, escalated: 0, review: 0 });
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const hydratedRef = useRef(false);
   const prefersReducedMotion = useReducedMotion();
 
   const flaggedCases = useMemo(
@@ -431,6 +437,20 @@ export default function FraudFrogApp() {
     () => withStatuses(flaggedCases, statuses),
     [flaggedCases, statuses],
   );
+
+  // Derived from the review decisions themselves so the counts stay consistent
+  // across every view and survive navigation (no separate resettable state).
+  const swipeStats = useMemo<SwipeSessionStats>(() => {
+    let approved = 0;
+    let escalated = 0;
+    let review = 0;
+    for (const fraudCase of casesWithStatuses) {
+      if (fraudCase.review_status === "approved_legitimate") approved += 1;
+      else if (fraudCase.review_status === "escalated_fraud") escalated += 1;
+      else if (fraudCase.review_status === "dismissed_flag") review += 1;
+    }
+    return { approved, escalated, review };
+  }, [casesWithStatuses]);
 
   const suppressedPatterns = useMemo(
     () => getSuppressedPatterns(casesWithStatuses),
@@ -818,13 +838,91 @@ export default function FraudFrogApp() {
       ...prev,
     ]);
     setLastAction({ caseId, previousStatus, newStatus: nextStatus, auditId, actionLabel: action.audit });
-    setSwipeStats((prev) => ({
-      approved: prev.approved + (nextStatus === "approved_legitimate" ? 1 : 0),
-      escalated: prev.escalated + (nextStatus === "escalated_fraud" ? 1 : 0),
-      review: prev.review + (nextStatus === "dismissed_flag" ? 1 : 0),
-    }));
     addToast(`${caseId} ${action.toast}.`, nextStatus === "escalated_fraud" ? "warning" : "success");
   };
+
+  // ── Session persistence ──────────────────────────────────────────────────
+  // Restore a previous session on mount so a refresh doesn't lose review work.
+  // Hydrating client-only persisted state via setState here is the intended
+  // pattern (a lazy initializer would cause an SSR hydration mismatch), so the
+  // set-state-in-effect rule is disabled for this one effect.
+  useEffect(() => {
+    /* eslint-disable react-hooks/set-state-in-effect */
+    try {
+      const dataRaw = window.localStorage.getItem(STORAGE_DATA_KEY);
+      if (dataRaw) {
+        const data = JSON.parse(dataRaw) as {
+          sourceRows?: ScoredTransactionCsvRow[];
+          sourceCsvText?: string | null;
+          isPythonScored?: boolean;
+          selectedFileName?: string;
+          datasetSummary?: DatasetSummary;
+        };
+        if (Array.isArray(data.sourceRows) && data.sourceRows.length > 0) {
+          setSourceRows(data.sourceRows);
+          setSourceCsvText(data.sourceCsvText ?? null);
+          setIsPythonScored(Boolean(data.isPythonScored));
+          setSelectedFileName(data.selectedFileName ?? "");
+          if (data.datasetSummary) setDatasetSummary(data.datasetSummary);
+          setAllScoredCases(buildFraudCases(data.sourceRows));
+
+          const sessionRaw = window.localStorage.getItem(STORAGE_SESSION_KEY);
+          if (sessionRaw) {
+            const session = JSON.parse(sessionRaw) as {
+              view?: View;
+              statuses?: Record<string, ReviewStatus>;
+              auditEntries?: AuditEntry[];
+              sensitivity?: SensitivityMode;
+            };
+            if (session.statuses) setStatuses(session.statuses);
+            if (Array.isArray(session.auditEntries)) setAuditEntries(session.auditEntries);
+            if (session.sensitivity) setSensitivity(session.sensitivity);
+            if (session.view && session.view !== "upload") setView(session.view);
+          }
+        }
+      }
+    } catch {
+      // Ignore corrupt or unavailable storage and start fresh.
+    }
+    hydratedRef.current = true;
+    /* eslint-enable react-hooks/set-state-in-effect */
+  }, []);
+
+  // Persist the dataset (changes rarely — on upload/process).
+  useEffect(() => {
+    if (!hydratedRef.current) return;
+    try {
+      if (sourceRows.length === 0) {
+        window.localStorage.removeItem(STORAGE_DATA_KEY);
+        return;
+      }
+      window.localStorage.setItem(
+        STORAGE_DATA_KEY,
+        JSON.stringify({
+          sourceRows,
+          sourceCsvText,
+          isPythonScored,
+          selectedFileName,
+          datasetSummary,
+        }),
+      );
+    } catch {
+      // Storage full or unavailable — degrade gracefully.
+    }
+  }, [sourceRows, sourceCsvText, isPythonScored, selectedFileName, datasetSummary]);
+
+  // Persist the lighter session state (changes on every review action).
+  useEffect(() => {
+    if (!hydratedRef.current) return;
+    try {
+      window.localStorage.setItem(
+        STORAGE_SESSION_KEY,
+        JSON.stringify({ view, statuses, auditEntries, sensitivity }),
+      );
+    } catch {
+      // Ignore storage failures.
+    }
+  }, [view, statuses, auditEntries, sensitivity]);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -940,10 +1038,7 @@ export default function FraudFrogApp() {
               onGoReview={() => setView("review")}
               onGoAudit={() => setView("audit")}
               onGoUpload={() => setView("upload")}
-              onGoSwipe={() => {
-                setSwipeStats({ approved: 0, escalated: 0, review: 0 });
-                setView("swipe");
-              }}
+              onGoSwipe={() => setView("swipe")}
             />
             <div className="flex min-w-0 flex-1 flex-col">
               {view === "dashboard" && (
