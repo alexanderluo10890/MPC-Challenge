@@ -64,6 +64,10 @@ Reviewers can:
 - use keyboard shortcuts and quick-review arrows
 - undo the last decision
 - inspect an audit log
+- benefit from an in-session feedback loop: when the reviewer dismisses the same
+  fraud pattern repeatedly (default: twice), the queue learns it is a likely false
+  positive, de-prioritizes remaining flags of that pattern, and surfaces a banner
+  explaining what it learned
 - export an updated CSV (`<file>_reviewed.csv`) containing every original column plus
   `risk_score`, `severity`, `flagged`, `is_fraud`, `review_status`, `detected_patterns`,
   and `reasons` — escalated transactions are marked `is_fraud=TRUE`

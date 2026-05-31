@@ -277,6 +277,59 @@ function filterCases(
   });
 }
 
+// ─── Feedback loop: learn from reviewer dismissals ────────────────────────────
+// After the reviewer dismisses the same fraud pattern this many times, the queue
+// treats further flags of that pattern as likely false positives and de-prioritizes
+// them. Set low enough to adapt quickly within a single review session.
+const DISMISS_SUPPRESS_THRESHOLD = 2;
+
+/** Count how many times each pattern has been dismissed as a false positive. */
+function getDismissalsByPattern(cases: FraudCase[]): Record<string, number> {
+  const counts: Record<string, number> = {};
+  for (const fraudCase of cases) {
+    if (fraudCase.review_status === "dismissed_flag") {
+      for (const pattern of fraudCase.detected_patterns) {
+        counts[pattern] = (counts[pattern] ?? 0) + 1;
+      }
+    }
+  }
+  return counts;
+}
+
+/** Patterns the reviewer has dismissed enough to suppress going forward. */
+function getSuppressedPatterns(cases: FraudCase[]): Set<string> {
+  const counts = getDismissalsByPattern(cases);
+  return new Set(
+    Object.entries(counts)
+      .filter(([, count]) => count >= DISMISS_SUPPRESS_THRESHOLD)
+      .map(([pattern]) => pattern),
+  );
+}
+
+/** An unreviewed flag whose pattern the reviewer has repeatedly dismissed. */
+function caseIsSuppressed(fraudCase: FraudCase, suppressed: Set<string>): boolean {
+  return (
+    fraudCase.review_status === "unreviewed" &&
+    suppressed.size > 0 &&
+    fraudCase.detected_patterns.some((pattern) => suppressed.has(pattern))
+  );
+}
+
+/** Sort by risk, but sink suppressed (learned false-positive) flags to the bottom. */
+function sortCasesByRisk(cases: FraudCase[], suppressed: Set<string>): FraudCase[] {
+  return [...cases].sort((a, b) => {
+    const suppressedA = caseIsSuppressed(a, suppressed) ? 1 : 0;
+    const suppressedB = caseIsSuppressed(b, suppressed) ? 1 : 0;
+    if (suppressedA !== suppressedB) {
+      return suppressedA - suppressedB;
+    }
+    return (
+      b.fraud_score - a.fraud_score ||
+      severityOrder[b.severity] - severityOrder[a.severity]
+    );
+  });
+}
+
 function formatPattern(pattern: string) {
   return patternLabels[pattern] ?? pattern.replaceAll("_", " ");
 }
@@ -394,14 +447,22 @@ export default function FraudFrogApp() {
     [flaggedCases, statuses],
   );
 
-  const sortedCases = useMemo(
-    () =>
-      [...casesWithStatuses].sort(
-        (a, b) =>
-          b.fraud_score - a.fraud_score ||
-          severityOrder[b.severity] - severityOrder[a.severity],
-      ),
+  const suppressedPatterns = useMemo(
+    () => getSuppressedPatterns(casesWithStatuses),
     [casesWithStatuses],
+  );
+
+  const sortedCases = useMemo(
+    () => sortCasesByRisk(casesWithStatuses, suppressedPatterns),
+    [casesWithStatuses, suppressedPatterns],
+  );
+
+  const suppressedCount = useMemo(
+    () =>
+      casesWithStatuses.filter((fraudCase) =>
+        caseIsSuppressed(fraudCase, suppressedPatterns),
+      ).length,
+    [casesWithStatuses, suppressedPatterns],
   );
 
   const filteredCases = useMemo(
@@ -628,11 +689,11 @@ export default function FraudFrogApp() {
       reasons: currentCase.reasons.slice(0, 3),
     };
 
+    const nextCasesWithStatuses = withStatuses(flaggedCases, nextStatuses);
     const nextCases = filterCases(
-      [...withStatuses(flaggedCases, nextStatuses)].sort(
-        (a, b) =>
-          b.fraud_score - a.fraud_score ||
-          severityOrder[b.severity] - severityOrder[a.severity],
+      sortCasesByRisk(
+        nextCasesWithStatuses,
+        getSuppressedPatterns(nextCasesWithStatuses),
       ),
       filters,
       searchTerm,
@@ -664,6 +725,31 @@ export default function FraudFrogApp() {
       nextStatus === "escalated_fraud" ? "warning" : "success",
     );
 
+    // Feedback loop: if this dismissal just crossed the suppression threshold for
+    // one of its patterns, tell the reviewer how many similar flags were de-prioritized.
+    if (nextStatus === "dismissed_flag") {
+      const before = getSuppressedPatterns(casesWithStatuses);
+      const after = getSuppressedPatterns(nextCasesWithStatuses);
+      const newlyLearned = currentCase.detected_patterns.find(
+        (pattern) => after.has(pattern) && !before.has(pattern),
+      );
+      if (newlyLearned) {
+        const deprioritized = nextCasesWithStatuses.filter(
+          (fraudCase) =>
+            fraudCase.review_status === "unreviewed" &&
+            fraudCase.detected_patterns.includes(newlyLearned),
+        ).length;
+        if (deprioritized > 0) {
+          addToast(
+            `Learned: "${formatPattern(newlyLearned)}" dismissed repeatedly — ${deprioritized} similar flag${
+              deprioritized === 1 ? "" : "s"
+            } de-prioritized in the queue.`,
+            "info",
+          );
+        }
+      }
+    }
+
     const allReviewed = flaggedCases.every(
       (fraudCase) =>
         nextStatuses[fraudCase.transaction_id] !== "unreviewed",
@@ -683,11 +769,11 @@ export default function FraudFrogApp() {
       ...statuses,
       [lastAction.caseId]: lastAction.previousStatus,
     };
+    const restoredCasesWithStatuses = withStatuses(flaggedCases, nextStatuses);
     const nextCases = filterCases(
-      [...withStatuses(flaggedCases, nextStatuses)].sort(
-        (a, b) =>
-          b.fraud_score - a.fraud_score ||
-          severityOrder[b.severity] - severityOrder[a.severity],
+      sortCasesByRisk(
+        restoredCasesWithStatuses,
+        getSuppressedPatterns(restoredCasesWithStatuses),
       ),
       filters,
       searchTerm,
@@ -929,6 +1015,8 @@ export default function FraudFrogApp() {
                   setActiveIndex(0);
                   setFilters(nextFilters);
                 }}
+                suppressedCount={suppressedCount}
+                suppressedPatterns={suppressedPatterns}
               />
             )}
 
@@ -1414,6 +1502,8 @@ function ReviewQueue({
   searchTerm,
   sensitivity,
   setFilters,
+  suppressedCount,
+  suppressedPatterns,
 }: {
   activeIndex: number;
   activeTab: DetailTab;
@@ -1439,6 +1529,8 @@ function ReviewQueue({
   searchTerm: string;
   sensitivity: SensitivityMode;
   setFilters: Dispatch<SetStateAction<FiltersState>>;
+  suppressedCount: number;
+  suppressedPatterns: Set<string>;
 }) {
   return (
     <main className="mx-auto min-h-screen w-full max-w-[1500px] px-4 py-5 sm:px-6">
@@ -1492,6 +1584,21 @@ function ReviewQueue({
           </div>
         </div>
       </div>
+
+      {suppressedCount > 0 && (
+        <div className="mt-3 flex flex-col gap-2 rounded-xl border border-indigo-500/30 bg-indigo-500/10 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-start gap-2.5">
+            <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-indigo-300" />
+            <p className="text-sm text-indigo-100">
+              <span className="font-semibold">Learning from your decisions:</span>{" "}
+              you repeatedly dismissed{" "}
+              {[...suppressedPatterns].map(formatPattern).join(", ")}. {suppressedCount}{" "}
+              similar unreviewed flag{suppressedCount === 1 ? "" : "s"} moved to the
+              bottom of the queue.
+            </p>
+          </div>
+        </div>
+      )}
 
       <section className="mt-3">
         <SearchFilters
