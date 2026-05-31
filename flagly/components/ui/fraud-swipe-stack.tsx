@@ -31,11 +31,11 @@ function animateMV(mv: MotionValue<number>, target: number, options: object = {}
   );
 }
 
-const severityStyles: Record<Severity, { bg: string; text: string; border: string; score: string }> = {
-  Critical: { bg: "bg-red-50",    text: "text-red-700",    border: "border-red-200",    score: "text-red-600"    },
-  High:     { bg: "bg-orange-50", text: "text-orange-700", border: "border-orange-200", score: "text-orange-500" },
-  Medium:   { bg: "bg-amber-50",  text: "text-amber-700",  border: "border-amber-200",  score: "text-amber-500"  },
-  Low:      { bg: "bg-slate-50",  text: "text-slate-700",  border: "border-slate-200",  score: "text-slate-600"  },
+const severityStyles: Record<Severity, { bg: string; text: string; border: string; score: string; glow: string }> = {
+  Critical: { bg: "bg-red-500/10",    text: "text-red-400",    border: "border-red-500/40",    score: "text-red-400",    glow: "risk-border-critical" },
+  High:     { bg: "bg-orange-500/10", text: "text-orange-400", border: "border-orange-500/35", score: "text-orange-400", glow: "risk-border-high"     },
+  Medium:   { bg: "bg-amber-500/10",  text: "text-amber-400",  border: "border-amber-500/30",  score: "text-amber-400",  glow: "risk-border-medium"   },
+  Low:      { bg: "bg-slate-800/40",  text: "text-slate-300",  border: "border-white/10",      score: "text-slate-300",  glow: "risk-border-low"      },
 };
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -149,20 +149,20 @@ export function FraudSwipeStack({
   if (isDone) {
     return (
       <div className="flex flex-col items-center justify-center py-24 text-center">
-        <div className="flex h-16 w-16 items-center justify-center rounded-full bg-emerald-50">
-          <CheckCircle2 className="h-8 w-8 text-emerald-600" />
+        <div className="flex h-16 w-16 items-center justify-center rounded-full bg-emerald-500/10">
+          <CheckCircle2 className="h-8 w-8 text-emerald-400" />
         </div>
-        <h2 className="mt-4 text-2xl font-semibold text-zinc-950">Queue cleared.</h2>
-        <p className="mt-2 text-sm text-zinc-500">No more unreviewed cases in the swipe queue.</p>
-        <div className="mt-6 flex items-center gap-4 text-sm text-zinc-500">
-          <span className="flex items-center gap-1.5 font-medium text-emerald-600">
+        <h2 className="mt-4 text-2xl font-semibold text-white">Queue cleared.</h2>
+        <p className="mt-2 text-sm text-gray-400">No more unreviewed cases in the swipe queue.</p>
+        <div className="mt-6 flex items-center gap-4 text-sm text-gray-500">
+          <span className="flex items-center gap-1.5 font-medium text-emerald-400">
             <BadgeCheck className="h-4 w-4" /> {sessionStats.approved} approved
           </span>
-          <span className="flex items-center gap-1.5 font-medium text-red-600">
+          <span className="flex items-center gap-1.5 font-medium text-red-400">
             <ShieldAlert className="h-4 w-4" /> {sessionStats.escalated} escalated
           </span>
           {sessionStats.review > 0 && (
-            <span className="flex items-center gap-1.5 font-medium text-amber-600">
+            <span className="flex items-center gap-1.5 font-medium text-amber-400">
               <Clock3 className="h-4 w-4" /> {sessionStats.review} dismissed
             </span>
           )}
@@ -177,20 +177,20 @@ export function FraudSwipeStack({
       {/* Progress header */}
       <div className="w-full max-w-sm">
         <div className="flex items-center justify-between">
-          <span className="text-sm font-semibold text-zinc-950">
+          <span className="text-sm font-semibold text-white">
             Case {caseNum} of {totalCasesInQueue}
           </span>
           <div className="flex items-center gap-3">
-            <StatChip icon={BadgeCheck} count={sessionStats.approved}  color="text-emerald-600" />
-            <StatChip icon={ShieldAlert} count={sessionStats.escalated} color="text-red-600"     />
+            <StatChip icon={BadgeCheck} count={sessionStats.approved}  color="text-emerald-400" />
+            <StatChip icon={ShieldAlert} count={sessionStats.escalated} color="text-red-400"     />
             {sessionStats.review > 0 && (
-              <StatChip icon={Clock3} count={sessionStats.review} color="text-amber-600" />
+              <StatChip icon={Clock3} count={sessionStats.review} color="text-amber-400" />
             )}
           </div>
         </div>
-        <div className="mt-2 h-1 overflow-hidden rounded-full bg-zinc-100">
+        <div className="mt-2 h-1 overflow-hidden rounded-full bg-white/10">
           <div
-            className="h-full rounded-full bg-zinc-950 transition-[width] duration-300"
+            className="h-full rounded-full bg-indigo-500 transition-[width] duration-300"
             style={{ width: `${progress}%` }}
           />
         </div>
@@ -250,7 +250,11 @@ export function FraudSwipeStack({
               }}
             >
               <div
-                className={`relative h-full w-full overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-xl ${isTop ? "cursor-grab active:cursor-grabbing" : ""}`}
+                className={`relative h-full w-full overflow-hidden rounded-2xl border bg-[#0A0A0C] shadow-2xl transition-all duration-200 ${
+                  isTop
+                    ? `cursor-grab active:cursor-grabbing ${severityStyles[fraudCase.severity].glow}`
+                    : "border-white/[0.06]"
+                }`}
               >
                 {/* Directional overlays — top card only */}
                 {isTop && (
@@ -292,27 +296,27 @@ export function FraudSwipeStack({
           onClick={() => void swipe("left")}
           label="Escalate"
           icon={<ShieldAlert className="h-4 w-4" />}
-          className="flex-1 border-red-200 bg-red-50 text-red-700 hover:bg-red-100 focus-visible:outline-red-500"
+          className="flex-1 border-red-500/30 bg-red-500/10 text-red-300 hover:bg-red-500/20 hover:border-red-500/50 shadow-[0_0_16px_rgba(239,68,68,0.08)] focus-visible:outline-red-500"
           aria-label="Escalate as fraud - Left arrow"
         />
         <ActionButton
           onClick={() => void swipe("down")}
           label="Dismiss"
           icon={<ChevronDown className="h-4 w-4" />}
-          className="border-zinc-200 bg-zinc-50 px-3 text-zinc-600 hover:bg-zinc-100 focus-visible:outline-zinc-500"
+          className="border-white/10 bg-white/5 px-3 text-gray-400 hover:bg-white/10 focus-visible:outline-zinc-500"
           aria-label="Dismiss flag - Down arrow"
         />
         <ActionButton
           onClick={() => void swipe("right")}
           label="Approve"
           icon={<BadgeCheck className="h-4 w-4" />}
-          className="flex-1 border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 focus-visible:outline-emerald-500"
+          className="flex-1 border-emerald-500/30 bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/20 hover:border-emerald-500/50 shadow-[0_0_16px_rgba(34,197,94,0.08)] focus-visible:outline-emerald-500"
           aria-label="Approve as legitimate - Right arrow"
         />
       </div>
 
       {/* Keyboard hint */}
-      <p className="mt-3 text-center text-xs text-zinc-400">
+      <p className="mt-3 text-center text-xs text-gray-500">
         <kbd className="font-mono">←</kbd> Escalate &nbsp;·&nbsp;
         <kbd className="font-mono">→</kbd> Approve &nbsp;·&nbsp;
         <kbd className="font-mono">↓</kbd> Dismiss
@@ -432,19 +436,19 @@ function CardContent({
           <div className={`text-5xl font-black tabular-nums leading-none ${sev.score}`}>
             {fraudCase.fraud_score}
           </div>
-          <div className="mt-0.5 text-xs font-medium text-zinc-400">/ 100</div>
+          <div className="mt-0.5 text-xs font-medium text-gray-500">/ 100</div>
         </div>
       </div>
 
       {/* Amount + merchant */}
       <div className="mt-4">
-        <div className="text-3xl font-bold tracking-tight text-zinc-950">
+        <div className="text-3xl font-bold tracking-tight text-white">
           {money.format(fraudCase.amount)}
         </div>
-        <div className="mt-1 text-base font-semibold text-zinc-700">
+        <div className="mt-1 text-base font-semibold text-gray-300">
           {fraudCase.merchant_name}
         </div>
-        <div className="mt-1 flex items-center gap-2 text-xs text-zinc-400">
+        <div className="mt-1 flex items-center gap-2 text-xs text-gray-500">
           <span className="capitalize">{fraudCase.channel.replace("_", " ")}</span>
           <span>·</span>
           <span>
@@ -460,7 +464,7 @@ function CardContent({
           {chips.map((chip) => (
             <span
               key={chip}
-              className="rounded-full border border-red-200 bg-red-50 px-2.5 py-1 text-xs font-semibold text-red-700"
+              className="rounded-full border border-red-500/30 bg-red-500/10 px-2.5 py-1 text-xs font-semibold text-red-400"
             >
               {chip}
             </span>
@@ -470,20 +474,20 @@ function CardContent({
 
       {/* Why flagged — top 3 reasons */}
       <div className="mt-4 flex-1">
-        <div className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-zinc-400">
+        <div className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-gray-500">
           <AlertTriangle className="h-3.5 w-3.5" />
           Why flagged
         </div>
         <ul className="mt-2 space-y-2">
           {fraudCase.reasons.slice(0, 3).map((reason) => (
-            <li key={reason} className="flex items-start gap-2 text-sm leading-5 text-zinc-700">
+            <li key={reason} className="flex items-start gap-2 text-sm leading-5 text-gray-400">
               <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-red-500" />
               {reason}
             </li>
           ))}
         </ul>
         {fraudCase.reasons.length > 3 && (
-          <p className="mt-2 text-xs text-zinc-400">
+          <p className="mt-2 text-xs text-gray-500">
             +{fraudCase.reasons.length - 3} more signals in details
           </p>
         )}
@@ -491,7 +495,7 @@ function CardContent({
 
       {/* View details button */}
       <button
-        className="mt-4 flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl border border-zinc-200 bg-zinc-50 py-2.5 text-sm font-medium text-zinc-600 transition-colors duration-200 hover:bg-zinc-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-950"
+        className="mt-4 flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/5 py-2.5 text-sm font-medium text-gray-400 transition-colors duration-200 hover:bg-white/10 hover:text-gray-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500"
         onClick={(e) => {
           e.stopPropagation();
           onViewDetails();
@@ -511,7 +515,7 @@ function CardContent({
 function PageSection({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <section>
-      <h3 className="mb-4 text-sm font-bold uppercase tracking-widest text-zinc-400">{title}</h3>
+      <h3 className="mb-4 text-sm font-bold uppercase tracking-widest text-gray-500">{title}</h3>
       {children}
     </section>
   );
@@ -543,19 +547,19 @@ function DetailDrawer({
 
   // Signal severity: first 2 = high-priority (red), rest = medium (amber)
   const signalPriority = (i: number) =>
-    i < 2 ? "border-red-200 bg-red-50 text-red-800" : "border-amber-200 bg-amber-50 text-amber-800";
+    i < 2 ? "border-red-500/30 bg-red-500/10 text-red-300" : "border-amber-500/30 bg-amber-500/10 text-amber-300";
 
   const timelineStyles: Record<string, { bar: string; badge: string; label: string }> = {
-    critical: { bar: "bg-red-500",    badge: "bg-red-100 text-red-700",    label: "Critical"  },
-    warning:  { bar: "bg-amber-400",  badge: "bg-amber-100 text-amber-700", label: "Warning"   },
-    normal:   { bar: "bg-emerald-500",badge: "bg-emerald-100 text-emerald-700",label: "Normal"  },
-    review:   { bar: "bg-sky-400",    badge: "bg-sky-100 text-sky-700",    label: "Review"    },
+    critical: { bar: "bg-red-500",    badge: "bg-red-500/15 text-red-400",     label: "Critical" },
+    warning:  { bar: "bg-amber-400",  badge: "bg-amber-500/15 text-amber-400", label: "Warning"  },
+    normal:   { bar: "bg-emerald-500",badge: "bg-emerald-500/15 text-emerald-400", label: "Normal" },
+    review:   { bar: "bg-sky-400",    badge: "bg-sky-500/15 text-sky-400",     label: "Review"   },
   };
 
   // Full-screen page — slides in from the right like a navigation page
   return (
     <motion.div
-      className="fixed inset-0 z-50 overflow-y-auto bg-[#f5f7f8]"
+      className="fixed inset-0 z-50 overflow-y-auto bg-black"
       role="dialog"
       aria-modal="true"
       aria-label={`Details for ${fraudCase.transaction_id}`}
@@ -565,10 +569,10 @@ function DetailDrawer({
       transition={{ type: "spring", damping: 32, stiffness: 300 }}
     >
       {/* ── STICKY PAGE HEADER ──────────────────────────────────────────── */}
-      <div className="sticky top-0 z-10 border-b border-zinc-200 bg-white/90 backdrop-blur-md">
+      <div className="sticky top-0 z-10 border-b border-white/[0.08] bg-black/90 backdrop-blur-md">
         <div className="mx-auto flex max-w-5xl items-center gap-4 px-6 py-4">
           <button
-            className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-zinc-200 bg-white px-4 py-2 text-sm font-semibold text-zinc-700 shadow-sm transition-colors hover:bg-zinc-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-950"
+            className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-gray-200 shadow-sm transition-colors hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500"
             onClick={onClose}
             type="button"
             aria-label="Back to review"
@@ -577,7 +581,7 @@ function DetailDrawer({
             Back to Review
           </button>
           <div className="min-w-0 flex-1">
-            <p className="truncate font-mono text-sm font-semibold text-zinc-400">
+            <p className="truncate font-mono text-sm font-semibold text-gray-500">
               {fraudCase.transaction_id} · {fraudCase.card_id}
             </p>
           </div>
@@ -592,8 +596,8 @@ function DetailDrawer({
 
         {/* Hero row */}
         <div>
-          <h1 className="text-4xl font-bold text-zinc-950">{fraudCase.merchant_name}</h1>
-          <p className="mt-2 text-base text-zinc-500">
+          <h1 className="text-4xl font-bold text-white">{fraudCase.merchant_name}</h1>
+          <p className="mt-2 text-base text-gray-400">
             {fraudCase.timestamp} · {fraudCase.channel.replace("_", " ")} ·{" "}
             {fraudCase.cardholder_country}
             {isForeign ? ` → ${fraudCase.merchant_country}` : ""}
@@ -603,27 +607,27 @@ function DetailDrawer({
         {/* KPI row — 3 large cards */}
         <div className="mt-6 grid grid-cols-3 gap-4">
           <div className={`rounded-2xl border p-6 ${sev.border} ${sev.bg}`}>
-            <p className="text-sm font-semibold uppercase tracking-wider text-zinc-500">Risk Score</p>
+            <p className="text-sm font-semibold uppercase tracking-wider text-gray-500">Risk Score</p>
             <p className={`mt-3 text-7xl font-black tabular-nums leading-none ${sev.score}`}>
               {fraudCase.fraud_score}
             </p>
-            <p className="mt-2 text-base font-medium text-zinc-500">out of 100</p>
+            <p className="mt-2 text-base font-medium text-gray-500">out of 100</p>
           </div>
-          <div className="rounded-2xl border border-zinc-200 bg-white p-6">
-            <p className="text-sm font-semibold uppercase tracking-wider text-zinc-500">Amount</p>
-            <p className="mt-3 text-4xl font-black tabular-nums leading-none text-zinc-950">
+          <div className="rounded-2xl border border-white/[0.08] bg-[#0A0A0C] p-6">
+            <p className="text-sm font-semibold uppercase tracking-wider text-gray-500">Amount</p>
+            <p className="mt-3 text-4xl font-black tabular-nums leading-none text-white">
               {money.format(fraudCase.amount)}
             </p>
-            <p className="mt-2 text-base font-medium capitalize text-zinc-500">
+            <p className="mt-2 text-base font-medium capitalize text-gray-500">
               {fraudCase.channel.replace("_", " ")}
             </p>
           </div>
-          <div className="rounded-2xl border border-red-200 bg-red-50 p-6">
-            <p className="text-sm font-semibold uppercase tracking-wider text-zinc-500">vs. Normal</p>
-            <p className="mt-3 text-7xl font-black tabular-nums leading-none text-red-600">
+          <div className="rounded-2xl border border-red-500/30 bg-red-500/10 p-6">
+            <p className="text-sm font-semibold uppercase tracking-wider text-gray-500">vs. Normal</p>
+            <p className="mt-3 text-7xl font-black tabular-nums leading-none text-red-400">
               {fraudCase.baseline.amount_ratio}×
             </p>
-            <p className="mt-2 text-base font-medium text-zinc-500">
+            <p className="mt-2 text-base font-medium text-gray-500">
               median {money.format(fraudCase.baseline.median_amount)}
             </p>
           </div>
@@ -656,12 +660,12 @@ function DetailDrawer({
                     return (
                       <li
                         key={`${event.time}-${event.label}`}
-                        className="flex overflow-hidden rounded-2xl border border-zinc-200 bg-white"
+                        className="flex overflow-hidden rounded-2xl border border-white/[0.08] bg-[#0A0A0C]"
                       >
                         <div className={`w-2 shrink-0 ${ts.bar}`} />
                         <div className="flex flex-1 items-start gap-5 px-5 py-5">
                           <div className="flex shrink-0 flex-col items-start gap-2">
-                            <span className="font-mono text-base font-bold text-zinc-600">
+                            <span className="font-mono text-base font-bold text-gray-400">
                               {event.time}
                             </span>
                             <span className={`rounded-full px-2.5 py-1 text-xs font-bold uppercase tracking-wide ${ts.badge}`}>
@@ -669,8 +673,8 @@ function DetailDrawer({
                             </span>
                           </div>
                           <div className="min-w-0">
-                            <p className="text-lg font-semibold text-zinc-900">{event.label}</p>
-                            <p className="mt-1.5 text-base leading-7 text-zinc-500">{event.description}</p>
+                            <p className="text-lg font-semibold text-white">{event.label}</p>
+                            <p className="mt-1.5 text-base leading-7 text-gray-400">{event.description}</p>
                           </div>
                         </div>
                       </li>
@@ -684,22 +688,22 @@ function DetailDrawer({
           {/* RIGHT column: spend comparison + related activity */}
           <div className="space-y-8">
             <PageSection title="Spend Comparison">
-              <div className="rounded-2xl border border-zinc-200 bg-white p-6">
+              <div className="rounded-2xl border border-white/[0.08] bg-[#0A0A0C] p-6">
                 <div className="flex items-end justify-between gap-2">
                   <div>
-                    <p className="text-sm text-zinc-500">Normal median</p>
-                    <p className="mt-0.5 text-xl font-bold text-zinc-800">
+                    <p className="text-sm text-gray-500">Normal median</p>
+                    <p className="mt-0.5 text-xl font-bold text-gray-200">
                       {money.format(fraudCase.baseline.median_amount)}
                     </p>
                   </div>
                   <div className="text-right">
-                    <p className="text-sm text-zinc-500">This transaction</p>
-                    <p className="mt-0.5 text-xl font-bold text-red-600">
+                    <p className="text-sm text-gray-500">This transaction</p>
+                    <p className="mt-0.5 text-xl font-bold text-red-400">
                       {money.format(fraudCase.amount)}
                     </p>
                   </div>
                 </div>
-                <div className="relative mt-4 h-5 overflow-hidden rounded-full bg-zinc-100">
+                <div className="relative mt-4 h-5 overflow-hidden rounded-full bg-white/10">
                   <div
                     className="absolute left-0 top-0 h-full rounded-full bg-emerald-500"
                     style={{ width: `${barNormalPct}%` }}
@@ -709,11 +713,11 @@ function DetailDrawer({
                     style={{ left: `${barNormalPct}%`, right: 0 }}
                   />
                 </div>
-                <p className="mt-2 text-right text-sm font-semibold text-red-500">
+                <p className="mt-2 text-right text-sm font-semibold text-red-400">
                   {fraudCase.baseline.amount_ratio}× over median
                 </p>
 
-                <div className="mt-5 grid grid-cols-2 gap-4 border-t border-zinc-100 pt-5">
+                <div className="mt-5 grid grid-cols-2 gap-4 border-t border-white/[0.08] pt-5">
                   {[
                     ["Usual countries", fraudCase.baseline.usual_countries.join(", "), false],
                     ["Merchant country", fraudCase.merchant_country, isForeign],
@@ -721,8 +725,8 @@ function DetailDrawer({
                     ["Known devices", String(fraudCase.baseline.known_devices_count), false],
                   ].map(([label, value, highlight]) => (
                     <div key={String(label)}>
-                      <p className="text-xs font-semibold uppercase tracking-wider text-zinc-400">{label}</p>
-                      <p className={`mt-1 text-base font-semibold ${highlight ? "text-red-600" : "text-zinc-800"}`}>
+                      <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">{label}</p>
+                      <p className={`mt-1 text-base font-semibold ${highlight ? "text-red-400" : "text-gray-200"}`}>
                         {value}
                         {label === "Merchant country" && isForeign && " ✗"}
                         {label === "Usual countries" && !isForeign && " ✓"}
@@ -739,22 +743,22 @@ function DetailDrawer({
                   {fraudCase.related_activity.map((item) => (
                     <div
                       key={item.transaction_id}
-                      className="flex items-start gap-4 rounded-2xl border border-zinc-200 bg-white px-5 py-4"
+                      className="flex items-start gap-4 rounded-2xl border border-white/[0.08] bg-[#0A0A0C] px-5 py-4"
                     >
-                      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-zinc-100">
-                        <ShieldAlert className="h-5 w-5 text-zinc-500" />
+                      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white/10">
+                        <ShieldAlert className="h-5 w-5 text-gray-400" />
                       </div>
                       <div className="min-w-0 flex-1">
                         <div className="flex items-baseline justify-between gap-2">
-                          <span className="font-mono text-sm font-semibold text-zinc-500">
+                          <span className="font-mono text-sm font-semibold text-gray-500">
                             {item.transaction_id}
                           </span>
-                          <span className="shrink-0 text-base font-bold text-zinc-900">
+                          <span className="shrink-0 text-base font-bold text-white">
                             {money.format(item.amount)}
                           </span>
                         </div>
-                        <p className="mt-1 text-base font-medium text-zinc-700">{item.merchant_name}</p>
-                        <p className="mt-0.5 text-sm text-zinc-400">{item.reason}</p>
+                        <p className="mt-1 text-base font-medium text-gray-300">{item.merchant_name}</p>
+                        <p className="mt-0.5 text-sm text-gray-500">{item.reason}</p>
                       </div>
                     </div>
                   ))}

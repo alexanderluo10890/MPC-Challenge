@@ -62,6 +62,7 @@ import {
   type SwipeSessionStats,
 } from "@/components/ui/fraud-swipe-stack";
 import { GooeyText } from "@/components/ui/gooey-text-morphing";
+import { AnimatedBackground } from "@/components/ui/animated-background";
 import { GridScan } from "@/components/ui/GridScan";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 
@@ -803,7 +804,8 @@ export default function FraudFrogApp() {
   const transitionIn = { duration: prefersReducedMotion ? 0 : 0.38, ease: [0, 0, 0.2, 1] as const, delay: prefersReducedMotion ? 0 : 0.06 };
 
   return (
-    <div className="min-h-screen bg-black text-white">
+    <div className="relative min-h-screen bg-black text-white">
+      <AnimatedBackground />
       <AnimatePresence mode="wait" initial={false}>
         {view === "upload" ? (
           <motion.div
@@ -827,7 +829,7 @@ export default function FraudFrogApp() {
         ) : (
           <motion.div
             key="app"
-            className="flex min-h-screen"
+            className="relative z-[1] flex min-h-screen"
             initial={enterVariants}
             animate={{ opacity: 1, y: 0 }}
             transition={transitionIn}
@@ -1234,7 +1236,7 @@ function Dashboard({
         </div>
         <div className="flex flex-wrap gap-2">
           <button
-            className="inline-flex min-h-11 items-center gap-2 rounded-md bg-indigo-600 px-5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500"
+            className="btn-primary-white min-h-11"
             onClick={onOpenReview}
             type="button"
           >
@@ -1565,8 +1567,15 @@ function TransactionReviewCard({
     .map(formatPattern)
     .join(" + ");
 
+  const riskGlow: Record<Severity, string> = {
+    Critical: "risk-border-critical",
+    High: "risk-border-high",
+    Medium: "risk-border-medium",
+    Low: "risk-border-low",
+  };
+
   return (
-    <article className="overflow-hidden rounded-xl border border-white/[0.08] bg-[#0A0A0C] shadow-sm">
+    <article className={`overflow-hidden rounded-xl border border-white/[0.08] bg-[#0A0A0C] transition-colors duration-300 animate-fade-in ${riskGlow[fraudCase.severity]}`}>
       <div className="border-b border-white/[0.08] p-5">
         <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
           <div>
@@ -1679,7 +1688,7 @@ function TransactionReviewCard({
             </button>
           </div>
           <button
-            className="inline-flex min-h-10 items-center gap-2 rounded-md border border-white/10 bg-white/5 px-4 text-sm font-semibold text-gray-200 shadow-sm hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500 disabled:cursor-not-allowed disabled:text-gray-600"
+            className="inline-flex min-h-10 items-center gap-2 rounded-md border border-indigo-500/25 bg-indigo-500/10 px-4 text-sm font-semibold text-indigo-300 shadow-sm hover:bg-indigo-500/15 hover:border-indigo-500/40 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500 disabled:cursor-not-allowed disabled:text-gray-600 disabled:border-white/10 disabled:bg-transparent"
             disabled={!lastAction}
             onClick={onUndo}
             type="button"
@@ -2564,12 +2573,13 @@ function MetricCard({
   value: string;
 }) {
   return (
-    <div className="flex flex-col">
+    <div className="relative flex flex-col overflow-hidden rounded-xl border border-white/[0.08] bg-[#0A0A0C] p-5 shadow-xl hover:border-white/[0.15] transition-colors duration-200 animate-fade-in">
+      <div className="pointer-events-none absolute inset-0 rounded-xl bg-gradient-to-br from-white/[0.04] via-transparent to-transparent" />
       <div className="flex items-center gap-2 text-gray-500">
         <Icon className="h-4 w-4" />
         <span className="text-sm font-medium">{label}</span>
       </div>
-      <div className="mt-2 text-3xl font-medium tracking-tight text-white">{value}</div>
+      <div className="mt-3 text-3xl font-semibold tracking-tight text-white">{value}</div>
     </div>
   );
 }
@@ -2589,9 +2599,9 @@ function ReviewActionButton({
 }) {
   const toneClass =
     tone === "approve"
-      ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/20"
+      ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/20 hover:border-emerald-500/50 shadow-[0_0_18px_rgba(34,197,94,0.08)]"
       : tone === "escalate"
-        ? "border-red-500/30 bg-red-500/10 text-red-300 hover:bg-red-500/20"
+        ? "border-red-500/30 bg-red-500/10 text-red-300 hover:bg-red-500/20 hover:border-red-500/50 shadow-[0_0_18px_rgba(239,68,68,0.10)]"
         : "border-white/10 bg-white/5 text-gray-200 hover:bg-white/10";
 
   return (
@@ -3203,7 +3213,7 @@ function PieChart({
       ).segments;
 
   return (
-    <div className="rounded-xl border border-white/[0.08] bg-[#0A0A0C] p-6 shadow-sm">
+    <div className="rounded-xl border border-white/[0.08] bg-[#0A0A0C] p-6 shadow-xl hover:border-white/[0.15] transition-colors duration-200">
       <h2 className="text-lg font-semibold text-white">{title}</h2>
       {subtitle && (
         <p className="mt-1 text-sm text-gray-500">{subtitle}</p>
