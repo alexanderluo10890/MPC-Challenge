@@ -1126,7 +1126,7 @@ function UploadScreen({
 
         <h1 className="mt-14">
           <GooeyText
-            texts={["FraudFrog", "Detect Fraud", "Flag Threats", "Protect the Pool", "FraudFrog"]}
+            texts={["Fraud Frog", "Detect Fraud", "Flag Threats", "Protect the Pool"]}
             morphTime={1.2}
             cooldownTime={2.5}
             className="h-20"
