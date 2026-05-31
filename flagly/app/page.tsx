@@ -1,6 +1,5 @@
-import FlaglyApp from "./flagly-app";
+import FraudFrogApp from "./flagly-app";
 
 export default function Home() {
-  return <FlaglyApp />;
+  return <FraudFrogApp />;
 }
-

@@ -1,8 +1,23 @@
 @import "tailwindcss";
 
 :root {
-  --background: #f5f7f8;
-  --foreground: #171717;
+  --background: #eef4f1;
+  --foreground: #13231f;
+  --ff-app-bg: #eef4f1;
+  --ff-surface: #ffffff;
+  --ff-surface-muted: #f6faf8;
+  --ff-surface-strong: #e3eee9;
+  --ff-border: #c9d9d3;
+  --ff-border-strong: #9fb8af;
+  --ff-text: #13231f;
+  --ff-muted: #5f716b;
+  --ff-subtle: #7f928b;
+  --ff-primary: #0f4f46;
+  --ff-primary-hover: #0a3f38;
+  --ff-accent: #0f9f86;
+  --ff-accent-soft: #dff5ee;
+  --ff-focus: #14b8a6;
+  --ff-shadow: 0 18px 45px rgb(15 79 70 / 0.08);
 }
 
 @theme inline {
@@ -15,4 +30,89 @@
 body {
   background: var(--background);
   color: var(--foreground);
+}
+
+.fraudfrog-theme {
+  color: var(--ff-text);
+  background:
+    linear-gradient(180deg, #f6faf8 0%, var(--ff-app-bg) 36rem),
+    var(--ff-app-bg);
+}
+
+.fraudfrog-theme ::selection {
+  background: rgb(20 184 166 / 0.22);
+}
+
+.fraudfrog-theme .bg-\[\#f5f7f8\],
+.fraudfrog-theme .bg-zinc-50,
+.fraudfrog-theme .bg-zinc-50\/80 {
+  background-color: var(--ff-surface-muted);
+}
+
+.fraudfrog-theme .bg-white {
+  background-color: var(--ff-surface);
+}
+
+.fraudfrog-theme .bg-zinc-100 {
+  background-color: var(--ff-surface-strong);
+}
+
+.fraudfrog-theme .bg-zinc-950 {
+  background-color: var(--ff-primary);
+}
+
+.fraudfrog-theme .hover\:bg-zinc-800:hover {
+  background-color: var(--ff-primary-hover);
+}
+
+.fraudfrog-theme .hover\:bg-zinc-100:hover,
+.fraudfrog-theme .hover\:bg-zinc-50:hover {
+  background-color: #edf6f2;
+}
+
+.fraudfrog-theme .border-zinc-200,
+.fraudfrog-theme .border-zinc-300 {
+  border-color: var(--ff-border);
+}
+
+.fraudfrog-theme .border-zinc-900 {
+  border-color: var(--ff-primary);
+}
+
+.fraudfrog-theme .text-zinc-950,
+.fraudfrog-theme .text-zinc-900,
+.fraudfrog-theme .text-zinc-800 {
+  color: var(--ff-text);
+}
+
+.fraudfrog-theme .text-zinc-700,
+.fraudfrog-theme .text-zinc-600 {
+  color: var(--ff-muted);
+}
+
+.fraudfrog-theme .text-zinc-500,
+.fraudfrog-theme .text-zinc-400 {
+  color: var(--ff-subtle);
+}
+
+.fraudfrog-theme .focus-visible\:outline-zinc-950:focus-visible {
+  outline-color: var(--ff-focus);
+}
+
+.fraudfrog-theme .focus\:border-zinc-950:focus {
+  border-color: var(--ff-focus);
+}
+
+.fraudfrog-theme .focus\:ring-zinc-950\/10:focus {
+  --tw-ring-color: rgb(20 184 166 / 0.16);
+}
+
+.fraudfrog-theme .shadow-sm {
+  box-shadow: 0 1px 2px rgb(15 79 70 / 0.06);
+}
+
+.fraudfrog-theme .shadow-lg,
+.fraudfrog-theme .shadow-xl,
+.fraudfrog-theme .shadow-2xl {
+  box-shadow: var(--ff-shadow);
 }

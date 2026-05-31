@@ -15,12 +15,11 @@ import {
   ChevronDown,
   Clock3,
   Info,
-  RotateCcw,
   ShieldAlert,
   X,
 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { FraudCase, ReviewStatus, Severity } from "@/app/mock-data";
+import type { FraudCase, Severity } from "@/app/mock-data";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -36,7 +35,7 @@ const severityStyles: Record<Severity, { bg: string; text: string; border: strin
   Critical: { bg: "bg-red-50",    text: "text-red-700",    border: "border-red-200",    score: "text-red-600"    },
   High:     { bg: "bg-orange-50", text: "text-orange-700", border: "border-orange-200", score: "text-orange-500" },
   Medium:   { bg: "bg-amber-50",  text: "text-amber-700",  border: "border-amber-200",  score: "text-amber-500"  },
-  Low:      { bg: "bg-emerald-50",text: "text-emerald-700",border: "border-emerald-200",score: "text-emerald-600"},
+  Low:      { bg: "bg-slate-50",  text: "text-slate-700",  border: "border-slate-200",  score: "text-slate-600"  },
 };
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -77,7 +76,7 @@ export function FraudSwipeStack({
   // card mid-animation. Now we manage our own queue and fire callbacks only
   // after the exit animation completes.
   const [queue, setQueue] = useState<FraudCase[]>(() => [...cases]);
-  const initialLengthRef = useRef(cases.length);
+  const [initialQueueLength] = useState(cases.length);
 
   const [detailCase, setDetailCase] = useState<FraudCase | null>(null);
   const swipingRef = useRef(false);
@@ -140,12 +139,11 @@ export function FraudSwipeStack({
 
   // Notify parent when the queue is fully processed
   useEffect(() => {
-    if (isDone && initialLengthRef.current > 0) onComplete?.();
-  }, [isDone, onComplete]);
+    if (isDone && initialQueueLength > 0) onComplete?.();
+  }, [initialQueueLength, isDone, onComplete]);
 
-  const processedCount = initialLengthRef.current - queue.length;
-  const progress = initialLengthRef.current === 0 ? 0 : Math.min((processedCount / initialLengthRef.current) * 100, 100);
-  const caseNum = startIndexOffset + processedCount + 1;
+  const progress = totalCasesInQueue === 0 ? 0 : Math.min((startIndexOffset / totalCasesInQueue) * 100, 100);
+  const caseNum = Math.min(startIndexOffset + 1, totalCasesInQueue);
 
   // ── Done state ──
   if (isDone) {
@@ -165,7 +163,7 @@ export function FraudSwipeStack({
           </span>
           {sessionStats.review > 0 && (
             <span className="flex items-center gap-1.5 font-medium text-amber-600">
-              <Clock3 className="h-4 w-4" /> {sessionStats.review} deferred
+              <Clock3 className="h-4 w-4" /> {sessionStats.review} dismissed
             </span>
           )}
         </div>
@@ -273,14 +271,13 @@ export function FraudSwipeStack({
                       opacity={downOpacity}
                       color="bg-amber-400"
                       icon={<ChevronDown className="h-14 w-14 text-white" />}
-                      label="REVIEW"
+                      label="DISMISS"
                     />
                   </>
                 )}
 
                 <CardContent
                   fraudCase={fraudCase}
-                  isTop={isTop}
                   onViewDetails={() => setDetailCase(fraudCase)}
                 />
               </div>
@@ -293,32 +290,32 @@ export function FraudSwipeStack({
       <div className="mt-5 flex w-full max-w-sm items-center gap-2">
         <ActionButton
           onClick={() => void swipe("left")}
-          label="Fraud"
+          label="Escalate"
           icon={<ShieldAlert className="h-4 w-4" />}
           className="flex-1 border-red-200 bg-red-50 text-red-700 hover:bg-red-100 focus-visible:outline-red-500"
-          aria-label="Escalate as fraud — Left arrow"
+          aria-label="Escalate as fraud - Left arrow"
         />
         <ActionButton
           onClick={() => void swipe("down")}
-          label="Review"
+          label="Dismiss"
           icon={<ChevronDown className="h-4 w-4" />}
           className="border-zinc-200 bg-zinc-50 px-3 text-zinc-600 hover:bg-zinc-100 focus-visible:outline-zinc-500"
-          aria-label="Mark for manual review — Down arrow"
+          aria-label="Dismiss flag - Down arrow"
         />
         <ActionButton
           onClick={() => void swipe("right")}
-          label="Legitimate"
+          label="Approve"
           icon={<BadgeCheck className="h-4 w-4" />}
           className="flex-1 border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 focus-visible:outline-emerald-500"
-          aria-label="Approve as legitimate — Right arrow"
+          aria-label="Approve as legitimate - Right arrow"
         />
       </div>
 
       {/* Keyboard hint */}
       <p className="mt-3 text-center text-xs text-zinc-400">
-        <kbd className="font-mono">←</kbd> Fraud &nbsp;·&nbsp;
-        <kbd className="font-mono">→</kbd> Legitimate &nbsp;·&nbsp;
-        <kbd className="font-mono">↓</kbd> Review
+        <kbd className="font-mono">←</kbd> Escalate &nbsp;·&nbsp;
+        <kbd className="font-mono">→</kbd> Approve &nbsp;·&nbsp;
+        <kbd className="font-mono">↓</kbd> Dismiss
       </p>
 
       {/* Detail drawer */}
@@ -405,11 +402,9 @@ function ActionButton({
 
 function CardContent({
   fraudCase,
-  isTop,
   onViewDetails,
 }: {
   fraudCase: FraudCase;
-  isTop: boolean;
   onViewDetails: () => void;
 }) {
   const sev = severityStyles[fraudCase.severity];
