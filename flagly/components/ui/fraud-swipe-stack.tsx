@@ -70,10 +70,16 @@ export function FraudSwipeStack({
   startIndexOffset = 0,
   sessionStats,
 }: FraudSwipeStackProps) {
-  const [currentIdx, setCurrentIdx] = useState(0);
+  // Internal queue — snapshot of `cases` so parent prop mutations (caused by
+  // our own callbacks updating statuses) never touch in-flight animations.
+  // Calling onApprove/onFraud immediately caused the parent to filter that
+  // case out of `unreviewedCases`, shrink the `cases` prop, and unmount the
+  // card mid-animation. Now we manage our own queue and fire callbacks only
+  // after the exit animation completes.
+  const [queue, setQueue] = useState<FraudCase[]>(() => [...cases]);
+  const initialLengthRef = useRef(cases.length);
+
   const [detailCase, setDetailCase] = useState<FraudCase | null>(null);
-  // useRef instead of useState — no re-render mid-animation, so Framer
-  // never sees drag flip false→true and doesn't reset the position.
   const swipingRef = useRef(false);
 
   const x = useMotionValue(0);
@@ -83,38 +89,36 @@ export function FraudSwipeStack({
   const leftOpacity  = useTransform(x, [-95, -35], [1, 0]);
   const downOpacity  = useTransform(y, [35, 95], [0, 1]);
 
-  const isDone = currentIdx >= cases.length;
-  const visibleCases = cases.slice(currentIdx, currentIdx + 3);
+  const isDone = queue.length === 0;
+  const visibleCases = queue.slice(0, 3);
 
   const swipe = useCallback(
     (dir: "left" | "right" | "down") => {
-      if (swipingRef.current || currentIdx >= cases.length) return;
-      const fraudCase = cases[currentIdx];
+      if (swipingRef.current || queue.length === 0) return;
+      const fraudCase = queue[0];
       if (!fraudCase) return;
 
       swipingRef.current = true;
 
-      if (dir === "right") onApprove(fraudCase.transaction_id);
-      else if (dir === "left") onFraud(fraudCase.transaction_id);
-      else onReview?.(fraudCase.transaction_id);
-
-      // Exit targets — card starts from wherever drag left it, then flies out
       const xTarget = dir === "right" ? 620 : dir === "left" ? -620 : 0;
       const yTarget = dir === "down" ? 620 : dir === "right" ? -40 : 40;
 
-      // Promise.then instead of await — keeps this function synchronous so
-      // no state update happens until the animation fully completes.
       void Promise.all([
         animateMV(x, xTarget, { duration: 0.3, ease: [0.4, 0, 1, 1] }),
         animateMV(y, yTarget, { duration: 0.3, ease: [0.4, 0, 1, 1] }),
       ]).then(() => {
         x.set(0);
         y.set(0);
-        setCurrentIdx((i) => i + 1);
+        // Callbacks fire after animation — parent re-renders can't unmount
+        // the card that was just animating (it's already gone from our queue).
+        if (dir === "right") onApprove(fraudCase.transaction_id);
+        else if (dir === "left") onFraud(fraudCase.transaction_id);
+        else onReview?.(fraudCase.transaction_id);
+        setQueue((prev) => prev.slice(1));
         swipingRef.current = false;
       });
     },
-    [cases, currentIdx, onApprove, onFraud, onReview, x, y],
+    [queue, onApprove, onFraud, onReview, x, y],
   );
 
   // Keyboard shortcuts
@@ -134,13 +138,14 @@ export function FraudSwipeStack({
     return () => window.removeEventListener("keydown", handler);
   }, [swipe]);
 
-  // Notify parent when all cases are processed
+  // Notify parent when the queue is fully processed
   useEffect(() => {
-    if (isDone && cases.length > 0) onComplete?.();
-  }, [isDone, cases.length, onComplete]);
+    if (isDone && initialLengthRef.current > 0) onComplete?.();
+  }, [isDone, onComplete]);
 
-  const progress = cases.length === 0 ? 0 : Math.min((currentIdx / cases.length) * 100, 100);
-  const caseNum = startIndexOffset + currentIdx + 1;
+  const processedCount = initialLengthRef.current - queue.length;
+  const progress = initialLengthRef.current === 0 ? 0 : Math.min((processedCount / initialLengthRef.current) * 100, 100);
+  const caseNum = startIndexOffset + processedCount + 1;
 
   // ── Done state ──
   if (isDone) {
