@@ -128,20 +128,6 @@ const defaultFilters: FiltersState = {
   channel: "All",
 };
 
-const sensitivityProfiles: Record<
-  SensitivityMode,
-  { precision: string }
-> = {
-  Conservative: {
-    precision: "Fewer flags, higher precision",
-  },
-  Balanced: {
-    precision: "Default precision and recall",
-  },
-  Aggressive: {
-    precision: "More flags, higher recall",
-  },
-};
 
 const statusLabels: Record<ReviewStatus, string> = {
   unreviewed: "Unreviewed",
@@ -189,10 +175,10 @@ const severityOrder: Record<Severity, number> = {
 };
 
 const statusTone: Record<ReviewStatus, string> = {
-  unreviewed: "border-white/10 bg-white/5 text-gray-400",
-  approved_legitimate: "border-emerald-500/30 bg-emerald-500/10 text-emerald-400",
-  dismissed_flag: "border-white/10 bg-white/5 text-gray-400",
-  escalated_fraud: "border-red-500/30 bg-red-500/10 text-red-400",
+  unreviewed: "border-zinc-200 bg-white text-zinc-700",
+  approved_legitimate: "border-emerald-200 bg-emerald-50 text-emerald-800",
+  dismissed_flag: "border-zinc-300 bg-zinc-100 text-zinc-700",
+  escalated_fraud: "border-red-200 bg-red-50 text-red-800",
 };
 
 const detectorKnobs = [
@@ -359,15 +345,14 @@ function makeSummary(fraudCase: FraudCase) {
   return `This case resembles ${patternTitle.toLowerCase()}. The card normally has ${fraudCase.baseline.common_categories
     .slice(0, 2)
     .join(" and ")} activity, but this transaction is a ${money.format(
-    fraudCase.amount,
-  )} ${formatChannel(fraudCase.channel).toLowerCase()} ${fraudCase.merchant_category.replaceAll(
-    "_",
-    " ",
-  )} purchase from ${
-    fraudCase.merchant_country === fraudCase.cardholder_country
+      fraudCase.amount,
+    )} ${formatChannel(fraudCase.channel).toLowerCase()} ${fraudCase.merchant_category.replaceAll(
+      "_",
+      " ",
+    )} purchase from ${fraudCase.merchant_country === fraudCase.cardholder_country
       ? "a new merchant"
       : "a foreign merchant country"
-  }. The score remains based only on deterministic signals.`;
+    }. The score remains based only on deterministic signals.`;
 }
 
 function createStatusMap(cases: FraudCase[]) {
@@ -706,9 +691,9 @@ export default function FraudFrogApp() {
       nextCases.length === 0
         ? 0
         : Math.min(
-            stillVisible ? currentPosition + 1 : currentPosition,
-            nextCases.length - 1,
-          );
+          stillVisible ? currentPosition + 1 : currentPosition,
+          nextCases.length - 1,
+        );
 
     setStatuses(nextStatuses);
     setAuditEntries((current) => [newAuditEntry, ...current]);
@@ -834,9 +819,9 @@ export default function FraudFrogApp() {
     ]);
     setLastAction({ caseId, previousStatus, newStatus: nextStatus, auditId, actionLabel: action.audit });
     setSwipeStats((prev) => ({
-      approved:  prev.approved  + (nextStatus === "approved_legitimate" ? 1 : 0),
-      escalated: prev.escalated + (nextStatus === "escalated_fraud"     ? 1 : 0),
-      review:    prev.review    + (nextStatus === "dismissed_flag"      ? 1 : 0),
+      approved: prev.approved + (nextStatus === "approved_legitimate" ? 1 : 0),
+      escalated: prev.escalated + (nextStatus === "escalated_fraud" ? 1 : 0),
+      review: prev.review + (nextStatus === "dismissed_flag" ? 1 : 0),
     }));
     addToast(`${caseId} ${action.toast}.`, nextStatus === "escalated_fraud" ? "warning" : "success");
   };
@@ -919,7 +904,7 @@ export default function FraudFrogApp() {
   const transitionIn = { duration: prefersReducedMotion ? 0 : 0.38, ease: [0, 0, 0.2, 1] as const, delay: prefersReducedMotion ? 0 : 0.06 };
 
   return (
-    <div className="min-h-screen bg-black text-white">
+    <div className="min-h-screen bg-[#f2f7f3] text-zinc-950">
       <AnimatePresence mode="wait" initial={false}>
         {view === "upload" ? (
           <motion.div
@@ -960,113 +945,116 @@ export default function FraudFrogApp() {
                 setView("swipe");
               }}
             />
-          <div className="flex min-w-0 flex-1 flex-col">
-            {view === "dashboard" && (
-              <Dashboard
-                auditEntries={auditEntries}
-                cases={casesWithStatuses}
-                datasetSummary={datasetSummary}
-                escalatedCount={escalatedCount}
-                allScoredCases={allScoredCases}
-                onExport={handleExport}
-                onOpenAudit={() => setView("audit")}
-                onOpenReview={() => setView("review")}
-                projectedFlaggedCount={projectedFlaggedCount}
-                reviewedCount={reviewedCount}
-                reviewProgress={reviewProgress}
-                sensitivity={sensitivity}
-                onSensitivityChange={handleSensitivityChange}
-                totalTransactions={datasetSummary.totalTransactions}
-              />
-            )}
-
-            {view === "review" && (
-              <ReviewQueue
-                activeIndex={safeActiveIndex}
-                activeTab={activeTab}
-                cases={casesWithStatuses}
-                currentCase={currentCase}
-                filteredCases={filteredCases}
-                filters={filters}
-                lastAction={lastAction}
-                onAction={handleReviewAction}
-                onClearFilters={() => {
-                  setFilters(defaultFilters);
-                  setSearchTerm("");
-                }}
-                onExport={handleExport}
-                onGoAudit={() => setView("audit")}
-                onGoDashboard={() => setView("dashboard")}
-                onNext={goNext}
-                onPrevious={goPrevious}
-                onSearch={(value) => {
-                  setActiveIndex(0);
-                  setSearchTerm(value);
-                }}
-                onSensitivityChange={handleSensitivityChange}
-                onTabChange={setActiveTab}
-                onUndo={handleUndo}
-                reviewProgress={reviewProgress}
-                reviewedCount={reviewedCount}
-                searchInputRef={searchInputRef}
-                searchTerm={searchTerm}
-                sensitivity={sensitivity}
-                setFilters={(nextFilters) => {
-                  setActiveIndex(0);
-                  setFilters(nextFilters);
-                }}
-                suppressedCount={suppressedCount}
-                suppressedPatterns={suppressedPatterns}
-              />
-            )}
-
-            {view === "audit" && (
-              <AuditLog
-                entries={auditEntries}
-                onBackToReview={() => setView("review")}
-                onExport={handleExport}
-                onGoDashboard={() => setView("dashboard")}
-              />
-            )}
-
-            {view === "complete" && (
-              <CompletionState
-                auditEntries={auditEntries}
-                onExport={handleExport}
-                onGoAudit={() => setView("audit")}
-                onReviewAgain={() => setView("review")}
-                onUndo={handleUndo}
-              />
-            )}
-
-            {view === "swipe" && (
-              <main className="w-full">
-                <div className="border-b border-white/[0.08] px-5 py-4 sm:px-8">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h1 className="text-lg font-semibold text-white">Quick Review</h1>
-                      <p className="mt-0.5 text-sm text-gray-500">
-                        Swipe right to approve, left to escalate, down to defer.
-                      </p>
-                    </div>
-                    <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-sm font-semibold text-gray-400 shadow-sm">
-                      {unreviewedCases.length} remaining
-                    </span>
-                  </div>
-                </div>
-                <FraudSwipeStack
-                  cases={unreviewedCases}
-                  onApprove={(id) => handleSwipeAction(id, "approved_legitimate")}
-                  onFraud={(id) => handleSwipeAction(id, "escalated_fraud")}
-                  onReview={(id) => handleSwipeAction(id, "dismissed_flag")}
-                  onComplete={() => setView("complete")}
-                  totalCasesInQueue={casesWithStatuses.length}
-                  startIndexOffset={reviewedCount}
-                  sessionStats={swipeStats}
+            <div className="flex min-w-0 flex-1 flex-col">
+              {view === "dashboard" && (
+                <Dashboard
+                  auditEntries={auditEntries}
+                  cases={casesWithStatuses}
+                  datasetSummary={datasetSummary}
+                  escalatedCount={escalatedCount}
+                  allScoredCases={allScoredCases}
+                  onExport={handleExport}
+                  onOpenAudit={() => setView("audit")}
+                  onOpenReview={() => setView("review")}
+                  projectedFlaggedCount={projectedFlaggedCount}
+                  reviewedCount={reviewedCount}
+                  reviewProgress={reviewProgress}
+                  sensitivity={sensitivity}
+                  onSensitivityChange={handleSensitivityChange}
+                  totalTransactions={datasetSummary.totalTransactions}
                 />
-              </main>
-            )}
-          </div>
+              )}
+
+              {view === "review" && (
+                <ReviewQueue
+                  activeIndex={safeActiveIndex}
+                  activeTab={activeTab}
+                  cases={casesWithStatuses}
+                  currentCase={currentCase}
+                  filteredCases={filteredCases}
+                  filters={filters}
+                  lastAction={lastAction}
+                  onAction={handleReviewAction}
+                  onClearFilters={() => {
+                    setFilters(defaultFilters);
+                    setSearchTerm("");
+                  }}
+                  onExport={handleExport}
+                  onGoAudit={() => setView("audit")}
+                  onGoDashboard={() => setView("dashboard")}
+                  onNext={goNext}
+                  onPrevious={goPrevious}
+                  onSearch={(value) => {
+                    setActiveIndex(0);
+                    setSearchTerm(value);
+                  }}
+                  onSensitivityChange={handleSensitivityChange}
+                  onTabChange={setActiveTab}
+                  onUndo={handleUndo}
+                  reviewProgress={reviewProgress}
+                  reviewedCount={reviewedCount}
+                  searchInputRef={searchInputRef}
+                  searchTerm={searchTerm}
+                  sensitivity={sensitivity}
+                  setFilters={(nextFilters) => {
+                    setActiveIndex(0);
+                    setFilters(nextFilters);
+                  }}
+                  suppressedCount={suppressedCount}
+                  suppressedPatterns={suppressedPatterns}
+                />
+              )}
+
+              {view === "audit" && (
+                <AuditLog
+                  entries={auditEntries}
+                  onBackToReview={() => setView("review")}
+                  onExport={handleExport}
+                  onGoDashboard={() => setView("dashboard")}
+                />
+              )}
+
+              {view === "complete" && (
+                <CompletionState
+                  auditEntries={auditEntries}
+                  onExport={handleExport}
+                  onGoAudit={() => setView("audit")}
+                  onReviewAgain={() => setView("review")}
+                  onUndo={handleUndo}
+                />
+              )}
+
+              {view === "swipe" && (
+                <main className="w-full">
+                  <div className="border-b border-zinc-200 bg-white px-5 py-4 sm:px-8">
+                    <div className="flex items-start justify-between gap-4">
+                      <div>
+                        <h1 className="text-lg font-semibold text-zinc-950">Quick Review</h1>
+                        <p className="mt-1 text-sm text-zinc-500">
+                          Use quick review for obvious cases. Switch to Review Queue for uncertain cases requiring full details.
+                        </p>
+                        <p className="mt-1 text-xs text-zinc-400">
+                          Swipe right to approve · left to escalate · down to defer
+                        </p>
+                      </div>
+                      <span className="shrink-0 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-sm font-semibold text-emerald-800">
+                        {unreviewedCases.length} remaining
+                      </span>
+                    </div>
+                  </div>
+                  <FraudSwipeStack
+                    cases={unreviewedCases}
+                    onApprove={(id) => handleSwipeAction(id, "approved_legitimate")}
+                    onFraud={(id) => handleSwipeAction(id, "escalated_fraud")}
+                    onReview={(id) => handleSwipeAction(id, "dismissed_flag")}
+                    onComplete={() => setView("complete")}
+                    totalCasesInQueue={casesWithStatuses.length}
+                    startIndexOffset={reviewedCount}
+                    sessionStats={swipeStats}
+                  />
+                </main>
+              )}
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
@@ -1177,7 +1165,7 @@ function UploadScreen({
             <div className="flex items-center gap-3">
               <FileText className="h-5 w-5 text-zinc-400" />
               <span className="text-sm font-semibold text-zinc-200">
-                {selectedFileName || "Choose transactions.csv"}
+                {selectedFileName || "Upload .csv transactions file"}
               </span>
             </div>
             <span className={`text-xs font-bold ${sourceRows.length > 0 ? "text-emerald-400" : "text-zinc-500"}`}>
@@ -1301,7 +1289,7 @@ function Dashboard({
       fraudCase.severity === "High" || fraudCase.severity === "Critical",
   ).length;
 
-  const categoryColors = ["#0ea5e9","#8b5cf6","#f59e0b","#10b981","#ef4444","#06b6d4","#f97316"];
+  const categoryColors = ["#0ea5e9", "#8b5cf6", "#f59e0b", "#10b981", "#ef4444", "#06b6d4", "#f97316"];
   const categoryData = Object.entries(countBy(allScoredCases, "merchant_category"))
     .sort((a, b) => b[1] - a[1])
     .slice(0, 7)
@@ -1323,7 +1311,7 @@ function Dashboard({
           <div className="flex flex-wrap gap-2">
             <ExportButton onExport={onExport} />
             <button
-              className="inline-flex min-h-10 items-center gap-2 rounded-md border border-white/10 bg-white/5 px-4 text-sm font-semibold text-gray-200 shadow-sm hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500"
+              className="inline-flex min-h-10 items-center gap-2 rounded-md border border-zinc-200 bg-white px-4 text-sm font-semibold text-zinc-800 shadow-sm hover:bg-zinc-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-950"
               onClick={onOpenAudit}
               type="button"
             >
@@ -1336,23 +1324,22 @@ function Dashboard({
         mode="Dashboard overview"
       />
 
-      <section className="mt-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <section className="mt-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <p className="text-sm font-semibold text-emerald-400">
+          <div className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
+            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
             Analysis ready
-          </p>
-          <h1 className="mt-1 text-3xl font-semibold tracking-normal text-white">
-            {projectedFlaggedCount} of {number.format(totalTransactions)}{" "}
-            transactions need reviewer triage.
+          </div>
+          <h1 className="mt-2 text-3xl font-bold tracking-tight text-zinc-950">
+            {projectedFlaggedCount} cases need review
           </h1>
-          <p className="mt-2 max-w-3xl text-sm leading-6 text-gray-400">
-            {datasetSummary.fileName} processed. The detector finds the signal;
-            the reviewer keeps the final say.
+          <p className="mt-1.5 max-w-xl text-sm leading-6 text-zinc-500">
+            {number.format(totalTransactions)} transactions from {datasetSummary.fileName} · the detector finds signals, the reviewer makes the final call.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
           <button
-            className="inline-flex min-h-11 items-center gap-2 rounded-md bg-indigo-600 px-5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500"
+            className="inline-flex min-h-11 items-center gap-2 rounded-md bg-emerald-600 px-5 text-sm font-semibold text-white shadow-sm hover:bg-emerald-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600"
             onClick={onOpenReview}
             type="button"
           >
@@ -1360,7 +1347,7 @@ function Dashboard({
             Start Review
           </button>
           <button
-            className="inline-flex min-h-11 items-center gap-2 rounded-md border border-white/10 bg-white/5 px-5 text-sm font-semibold text-gray-200 shadow-sm hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500"
+            className="inline-flex min-h-11 items-center gap-2 rounded-md border border-zinc-200 bg-white px-5 text-sm font-semibold text-zinc-800 shadow-sm hover:bg-zinc-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-950"
             onClick={onOpenReview}
             type="button"
           >
@@ -1378,12 +1365,12 @@ function Dashboard({
         />
         <MetricCard
           icon={ShieldAlert}
-          label="Flagged cases"
+          label="Cases needing review"
           value={number.format(projectedFlaggedCount)}
         />
         <MetricCard
           icon={AlertTriangle}
-          label="High priority"
+          label="High-priority cases"
           value={number.format(highOrCriticalCount)}
         />
         <MetricCard
@@ -1401,7 +1388,7 @@ function Dashboard({
         />
         <PieChart
           data={fraudData}
-          title="Fraud vs clean"
+          title="Flagged vs unflagged"
           subtitle={`${projectedFlaggedCount} flagged out of ${number.format(totalTransactions)} transactions at ${sensitivity} sensitivity.`}
         />
       </section>
@@ -1421,50 +1408,57 @@ function Dashboard({
       </section>
 
       <section className="mt-5 grid gap-5 lg:grid-cols-[1fr_360px]">
-        <div className="rounded-xl border border-white/[0.08] bg-[#0A0A0C] p-6 shadow-sm">
+        <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm">
           <div className="flex items-center justify-between gap-4">
             <div>
-              <h2 className="text-lg font-semibold text-white">
-                Top Issues
+              <h2 className="text-lg font-semibold text-zinc-950">
+                Signals to Investigate
               </h2>
-              <p className="mt-1 text-sm text-gray-500">
-                Highest-signal findings from the current upload.
+              <p className="mt-1 text-sm text-zinc-500">
+                Highest-signal patterns from the current upload.
               </p>
             </div>
-            <BarChart3 className="h-5 w-5 text-gray-500" />
+            <BarChart3 className="h-5 w-5 text-zinc-500" />
           </div>
           <div className="mt-5 grid gap-3 md:grid-cols-3">
             {buildTopIssues(allScoredCases).slice(0, 3).map(([label, value, meta]) => (
               <div
                 key={label}
-                className="rounded-lg bg-[#101018] p-4"
+                className="rounded-lg bg-zinc-50 p-4"
               >
-                <div className="text-xs font-semibold uppercase tracking-normal text-gray-500">
+                <div className="text-xs font-semibold uppercase tracking-normal text-zinc-500">
                   {label}
                 </div>
-                <div className="mt-2 text-base font-semibold text-white">
+                <div className="mt-2 text-base font-semibold text-zinc-950">
                   {value}
                 </div>
-                <div className="mt-1 text-sm text-gray-400">{meta}</div>
+                <div className="mt-1 text-sm text-zinc-600">{meta}</div>
               </div>
             ))}
           </div>
         </div>
 
-        <div className="rounded-xl border border-white/[0.08] bg-[#0A0A0C] p-6 shadow-sm">
-          <h2 className="text-sm font-semibold text-white">Session</h2>
-          <p className="mt-2 text-sm leading-6 text-gray-400">
-            {auditEntries.length === 0
-              ? "No review actions yet."
-              : `${auditEntries.length} decision${
-                  auditEntries.length === 1 ? "" : "s"
-                } recorded. ${escalatedCount} escalated.`}
-          </p>
-          <p className="mt-2 text-sm text-gray-500">
-            {reviewedCount} of {cases.length} current cases reviewed.
-          </p>
+        <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm">
+          <h2 className="text-sm font-semibold text-zinc-500 uppercase tracking-wide">Session</h2>
+          <div className="mt-3 space-y-2">
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-zinc-600">Reviewed</span>
+              <span className="font-semibold text-zinc-950">{reviewedCount} / {cases.length}</span>
+            </div>
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-zinc-600">Escalated</span>
+              <span className="font-semibold text-red-700">{escalatedCount}</span>
+            </div>
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-zinc-600">Audit entries</span>
+              <span className="font-semibold text-zinc-950">{auditEntries.length}</span>
+            </div>
+          </div>
+          {auditEntries.length === 0 && (
+            <p className="mt-3 text-xs text-zinc-400">No review actions yet.</p>
+          )}
           <button
-            className="mt-5 inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-md border border-white/10 bg-white/5 px-4 text-sm font-semibold text-gray-200 shadow-sm hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500"
+            className="mt-5 inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-md border border-zinc-200 bg-white px-4 text-sm font-semibold text-zinc-700 shadow-sm hover:bg-zinc-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600"
             onClick={onOpenAudit}
             type="button"
           >
@@ -1538,7 +1532,7 @@ function ReviewQueue({
         action={
           <div className="flex flex-wrap items-center gap-2">
             <button
-              className="inline-flex min-h-10 items-center gap-2 rounded-md border border-white/10 bg-white/5 px-4 text-sm font-semibold text-gray-200 shadow-sm hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500"
+              className="inline-flex min-h-10 items-center gap-2 rounded-md border border-zinc-200 bg-white px-4 text-sm font-semibold text-zinc-800 shadow-sm hover:bg-zinc-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-950"
               onClick={onGoDashboard}
               type="button"
             >
@@ -1546,7 +1540,7 @@ function ReviewQueue({
               Dashboard
             </button>
             <button
-              className="inline-flex min-h-10 items-center gap-2 rounded-md border border-white/10 bg-white/5 px-4 text-sm font-semibold text-gray-200 shadow-sm hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500"
+              className="inline-flex min-h-10 items-center gap-2 rounded-md border border-zinc-200 bg-white px-4 text-sm font-semibold text-zinc-800 shadow-sm hover:bg-zinc-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-950"
               onClick={onGoAudit}
               type="button"
             >
@@ -1560,36 +1554,33 @@ function ReviewQueue({
         mode="Review Queue"
       />
 
-      <div className="mt-4 rounded-xl border border-white/[0.08] bg-[#0A0A0C] px-4 py-3 shadow-sm">
-        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-          <div>
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="rounded-full bg-indigo-600 px-3 py-1 text-sm font-semibold text-white">
-                Triage Card
-              </span>
-              <span className="text-sm font-medium text-gray-400">
-                {reviewedCount} of {cases.length} cases reviewed
-              </span>
-            </div>
-            <div className="mt-3 h-2 overflow-hidden rounded-full bg-white/10">
+      <div className="mt-4 rounded-xl border border-zinc-200 bg-white px-5 py-3.5 shadow-sm">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex flex-wrap items-center gap-3">
+            <span className="rounded-full bg-emerald-600 px-3 py-1 text-sm font-bold text-white">
+              Case {filteredCases.length > 0 ? activeIndex + 1 : 0} of {filteredCases.length}
+            </span>
+            <span className="text-sm text-zinc-500">
+              {reviewedCount} reviewed · {cases.length - reviewedCount} remaining
+            </span>
+          </div>
+          <div className="flex items-center gap-2.5">
+            <div className="h-1.5 w-28 overflow-hidden rounded-full bg-zinc-100">
               <div
-                className="h-full rounded-full bg-emerald-500"
+                className="h-full rounded-full bg-emerald-500 transition-all duration-300"
                 style={{ width: `${reviewProgress}%` }}
               />
             </div>
-          </div>
-          <div className="text-sm font-medium text-gray-400">
-            {filteredCases.length} matching case
-            {filteredCases.length === 1 ? "" : "s"}
+            <span className="text-xs font-semibold tabular-nums text-zinc-500">{reviewProgress}%</span>
           </div>
         </div>
       </div>
 
       {suppressedCount > 0 && (
-        <div className="mt-3 flex flex-col gap-2 rounded-xl border border-indigo-500/30 bg-indigo-500/10 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="mt-3 flex flex-col gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-start gap-2.5">
-            <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-indigo-300" />
-            <p className="text-sm text-indigo-100">
+            <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
+            <p className="text-sm text-emerald-900">
               <span className="font-semibold">Learning from your decisions:</span>{" "}
               you repeatedly dismissed{" "}
               {[...suppressedPatterns].map(formatPattern).join(", ")}. {suppressedCount}{" "}
@@ -1613,15 +1604,14 @@ function ReviewQueue({
         <div className="mt-2 flex flex-wrap items-center justify-between gap-2 px-0.5">
           <KeyboardShortcutHelp />
           <div className="flex items-center gap-1.5">
-            <SlidersHorizontal className="h-3.5 w-3.5 text-gray-500" />
+            <SlidersHorizontal className="h-3.5 w-3.5 text-zinc-400" />
             {(["Conservative", "Balanced", "Aggressive"] as SensitivityMode[]).map(
               (mode) => (
                 <button
-                  className={`min-h-7 cursor-pointer rounded px-2.5 text-xs font-medium transition-colors duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500 ${
-                    sensitivity === mode
-                      ? "bg-indigo-600 text-white"
-                      : "border border-white/10 bg-white/5 text-gray-300 hover:bg-white/10"
-                  }`}
+                  className={`min-h-7 cursor-pointer rounded px-2.5 text-xs font-medium transition-colors duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600 ${sensitivity === mode
+                      ? "bg-emerald-600 text-white"
+                      : "border border-zinc-200 bg-white text-zinc-600 hover:bg-zinc-50"
+                    }`}
                   key={mode}
                   onClick={() => onSensitivityChange(mode)}
                   type="button"
@@ -1703,26 +1693,30 @@ function TransactionReviewCard({
     .join(" + ");
 
   return (
-    <article className="overflow-hidden rounded-xl border border-white/[0.08] bg-[#0A0A0C] shadow-sm">
-      <div className="border-b border-white/[0.08] p-5">
-        <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+    <article className="overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-sm">
+      <div className="border-b border-zinc-100 bg-zinc-50/60 p-5">
+        <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
           <div>
-            <p className="text-sm font-semibold text-gray-500">
-              Case {caseNumber} of {matchingCount}
-            </p>
-            <h2 className="mt-2 text-3xl font-semibold tracking-normal text-white">
-              {fraudCase.severity} Risk - {fraudCase.fraud_score}/100
+            <div className="flex flex-wrap items-center gap-2">
+              <SeverityBadge severity={fraudCase.severity} />
+              <span
+                className={`rounded-full border px-3 py-1 text-sm font-semibold ${statusTone[fraudCase.review_status]}`}
+              >
+                {statusLabels[fraudCase.review_status]}
+              </span>
+            </div>
+            <h2 className="mt-3 text-3xl font-bold tracking-tight text-zinc-950">
+              {fraudCase.fraud_score}
+              <span className="text-lg font-medium text-zinc-400">/100</span>
+              <span className="ml-3 text-xl font-semibold text-zinc-600">{fraudCase.severity} Risk</span>
             </h2>
-            <p className="mt-2 text-base font-medium text-gray-400">
-              Pattern: {patternTitle}
+            <p className="mt-1.5 text-sm font-medium text-zinc-500">
+              {patternTitle}
             </p>
           </div>
-          <div className="flex flex-wrap gap-2">
-            <SeverityBadge severity={fraudCase.severity} />
-            <span
-              className={`rounded-full border px-3 py-1 text-sm font-semibold ${statusTone[fraudCase.review_status]}`}
-            >
-              {statusLabels[fraudCase.review_status]}
+          <div className="shrink-0 text-right">
+            <span className="text-xs font-medium text-zinc-400">
+              Case {caseNumber} of {matchingCount}
             </span>
           </div>
         </div>
@@ -1735,23 +1729,35 @@ function TransactionReviewCard({
           ))}
         </div>
 
-        <div className="mt-5 grid gap-4 rounded-xl bg-[#101018] p-4 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="mt-5 grid gap-4 rounded-xl bg-zinc-50 p-4 sm:grid-cols-2 xl:grid-cols-4">
           <Fact label="Transaction ID" value={fraudCase.transaction_id} />
           <Fact label="Amount" value={money.format(fraudCase.amount)} strong />
           <Fact label="Merchant" value={fraudCase.merchant_name} />
           <Fact label="Card ID" value={fraudCase.card_id} />
         </div>
 
-        <div className="mt-5 rounded-xl border border-amber-500/30 bg-amber-500/10 p-4">
-          <div className="flex items-center gap-2 text-sm font-semibold text-amber-400">
-            <AlertTriangle className="h-4 w-4" />
-            Why flagged
+        <div className="mt-5 rounded-xl border border-amber-200 bg-amber-50 p-4">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 text-sm font-semibold text-amber-900">
+              <AlertTriangle className="h-4 w-4" />
+              Why flagged
+            </div>
+            <span className="text-xs text-amber-700/70">Signals — reviewer makes the final call</span>
           </div>
-          <ReasonList reasons={fraudCase.reasons.slice(0, 3)} />
+          <ol className="mt-3 space-y-2.5">
+            {fraudCase.reasons.slice(0, 3).map((reason, i) => (
+              <li key={reason} className="flex items-start gap-2.5">
+                <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-amber-300 text-[10px] font-bold text-amber-950">
+                  {i + 1}
+                </span>
+                <span className="text-sm leading-5 text-amber-950">{reason}</span>
+              </li>
+            ))}
+          </ol>
         </div>
 
-        <details className="mt-4 rounded-xl border border-white/[0.08] bg-[#0A0A0C] p-4">
-          <summary className="cursor-pointer text-sm font-semibold text-gray-200">
+        <details className="mt-4 rounded-xl border border-zinc-200 bg-white p-4">
+          <summary className="cursor-pointer text-sm font-semibold text-zinc-800">
             Transaction details
           </summary>
           <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
@@ -1796,10 +1802,10 @@ function TransactionReviewCard({
           />
         </div>
 
-        <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-white/[0.08] pt-4">
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-zinc-200 pt-4">
           <div className="flex flex-wrap gap-2">
             <button
-              className="inline-flex min-h-10 items-center gap-2 rounded-md border border-white/10 bg-white/5 px-4 text-sm font-semibold text-gray-200 shadow-sm hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500"
+              className="inline-flex min-h-10 items-center gap-2 rounded-md border border-zinc-200 bg-white px-4 text-sm font-semibold text-zinc-800 shadow-sm hover:bg-zinc-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-950"
               onClick={onPrevious}
               type="button"
             >
@@ -1807,7 +1813,7 @@ function TransactionReviewCard({
               Previous
             </button>
             <button
-              className="inline-flex min-h-10 items-center gap-2 rounded-md border border-white/10 bg-white/5 px-4 text-sm font-semibold text-gray-200 shadow-sm hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500"
+              className="inline-flex min-h-10 items-center gap-2 rounded-md border border-zinc-200 bg-white px-4 text-sm font-semibold text-zinc-800 shadow-sm hover:bg-zinc-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-950"
               onClick={onNext}
               type="button"
             >
@@ -1816,7 +1822,7 @@ function TransactionReviewCard({
             </button>
           </div>
           <button
-            className="inline-flex min-h-10 items-center gap-2 rounded-md border border-white/10 bg-white/5 px-4 text-sm font-semibold text-gray-200 shadow-sm hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500 disabled:cursor-not-allowed disabled:text-gray-600"
+            className="inline-flex min-h-10 items-center gap-2 rounded-md border border-zinc-200 bg-white px-4 text-sm font-semibold text-zinc-800 shadow-sm hover:bg-zinc-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-950 disabled:cursor-not-allowed disabled:text-zinc-400"
             disabled={!lastAction}
             onClick={onUndo}
             type="button"
@@ -1842,16 +1848,15 @@ function EvidencePanel({
   const tabs: DetailTab[] = ["Baseline", "Related", "Timeline", "AI Summary"];
 
   return (
-    <section className="rounded-lg border border-white/[0.08] bg-[#0A0A0C] shadow-sm">
-      <div className="border-b border-white/[0.08] p-3">
+    <section className="rounded-lg border border-zinc-200 bg-white shadow-sm">
+      <div className="border-b border-zinc-200 p-3">
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 xl:grid-cols-2">
           {tabs.map((tab) => (
             <button
-              className={`min-h-10 rounded-md px-3 text-sm font-semibold transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500 ${
-                activeTab === tab
-                  ? "bg-indigo-600 text-white"
-                  : "bg-white/5 text-gray-400 hover:bg-white/10"
-              }`}
+              className={`min-h-10 rounded-md px-3 text-sm font-semibold transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600 ${activeTab === tab
+                  ? "bg-emerald-600 text-white"
+                  : "bg-zinc-50 text-zinc-600 hover:bg-emerald-50 hover:text-zinc-900"
+                }`}
               key={tab}
               onClick={() => onTabChange(tab)}
               type="button"
@@ -1932,20 +1937,20 @@ function BaselineSnapshot({ fraudCase }: { fraudCase: FraudCase }) {
         title="Baseline comparison"
         subtitle="Normal behavior for this card versus the current transaction."
       />
-      <div className="mt-4 overflow-hidden rounded-lg border border-white/[0.08]">
-        <div className="grid grid-cols-[1fr_1fr_94px] bg-[#101018] px-3 py-2 text-xs font-semibold uppercase tracking-normal text-gray-500">
+      <div className="mt-4 overflow-hidden rounded-lg border border-zinc-200">
+        <div className="grid grid-cols-[1fr_1fr_94px] bg-zinc-50 px-3 py-2 text-xs font-semibold uppercase tracking-normal text-zinc-500">
           <span>Normal for this card</span>
           <span>This transaction</span>
           <span>Signal</span>
         </div>
         {rows.map((row) => (
           <div
-            className="grid grid-cols-[1fr_1fr_94px] gap-2 border-t border-white/[0.08] px-3 py-3 text-sm"
+            className="grid grid-cols-[1fr_1fr_94px] gap-2 border-t border-zinc-200 px-3 py-3 text-sm"
             key={`${row.normal}-${row.current}`}
           >
-            <span className="text-gray-400">{row.normal}</span>
-            <span className="font-medium text-gray-200">{row.current}</span>
-            <span className="rounded-full border border-white/10 bg-white/5 px-2 py-1 text-center text-xs font-semibold text-gray-400">
+            <span className="text-zinc-600">{row.normal}</span>
+            <span className="font-medium text-zinc-900">{row.current}</span>
+            <span className="rounded-full border border-zinc-200 bg-white px-2 py-1 text-center text-xs font-semibold text-zinc-700">
               {row.badge}
             </span>
           </div>
@@ -1974,28 +1979,28 @@ function RelatedActivityPanel({ fraudCase }: { fraudCase: FraudCase }) {
       <div className="mt-4 space-y-4">
         {Object.entries(grouped).map(([group, items]) => (
           <section key={group}>
-            <h3 className="text-sm font-semibold text-white">{group}</h3>
+            <h3 className="text-sm font-semibold text-zinc-950">{group}</h3>
             <div className="mt-2 space-y-2">
               {items.map((item) => (
                 <div
-                  className="rounded-lg border border-white/[0.08] bg-[#101018] p-3"
+                  className="rounded-lg border border-zinc-200 bg-zinc-50 p-3"
                   key={item.transaction_id}
                 >
                   <div className="flex flex-wrap items-center justify-between gap-2">
-                    <span className="text-sm font-semibold text-white">
+                    <span className="text-sm font-semibold text-zinc-950">
                       {item.transaction_id}
                     </span>
-                    <span className="text-sm font-semibold text-gray-200">
+                    <span className="text-sm font-semibold text-zinc-800">
                       {money.format(item.amount)}
                     </span>
                   </div>
-                  <p className="mt-1 text-sm text-gray-400">
+                  <p className="mt-1 text-sm text-zinc-700">
                     {item.merchant_name} - {formatShortDate(item.timestamp)}
                   </p>
-                  <p className="mt-2 text-xs font-medium text-gray-500">
+                  <p className="mt-2 text-xs font-medium text-zinc-500">
                     {item.card_id}
                   </p>
-                  <p className="mt-2 text-sm leading-5 text-gray-400">
+                  <p className="mt-2 text-sm leading-5 text-zinc-600">
                     Related because: {item.reason}
                   </p>
                 </div>
@@ -2020,28 +2025,27 @@ function FraudTimeline({ fraudCase }: { fraudCase: FraudCase }) {
         {fraudCase.timeline.map((event) => (
           <li className="relative pl-8" key={`${event.time}-${event.label}`}>
             <span
-              className={`absolute left-0 top-1 flex h-4 w-4 items-center justify-center rounded-full border ${
-                event.type === "normal"
-                  ? "border-emerald-500/50 bg-emerald-500/10"
+              className={`absolute left-0 top-1 flex h-4 w-4 items-center justify-center rounded-full border ${event.type === "normal"
+                  ? "border-emerald-300 bg-emerald-50"
                   : event.type === "critical"
-                    ? "border-red-500/50 bg-red-500/10"
+                    ? "border-red-300 bg-red-50"
                     : event.type === "review"
-                      ? "border-sky-500/50 bg-sky-500/10"
-                      : "border-amber-500/50 bg-amber-500/10"
-              }`}
+                      ? "border-sky-300 bg-sky-50"
+                      : "border-amber-300 bg-amber-50"
+                }`}
             >
-              <span className="h-1.5 w-1.5 rounded-full bg-current text-gray-400" />
+              <span className="h-1.5 w-1.5 rounded-full bg-current text-zinc-700" />
             </span>
-            <div className="rounded-lg border border-white/[0.08] bg-[#101018] p-3">
+            <div className="rounded-lg border border-zinc-200 bg-zinc-50 p-3">
               <div className="flex flex-wrap items-center gap-2">
-                <span className="font-mono text-sm font-semibold text-gray-200">
+                <span className="font-mono text-sm font-semibold text-zinc-900">
                   {event.time}
                 </span>
-                <span className="text-sm font-semibold text-white">
+                <span className="text-sm font-semibold text-zinc-950">
                   {event.label}
                 </span>
               </div>
-              <p className="mt-1 text-sm leading-5 text-gray-400">
+              <p className="mt-1 text-sm leading-5 text-zinc-600">
                 {event.description}
               </p>
             </div>
@@ -2075,21 +2079,21 @@ function AISummaryPanel({ fraudCase }: { fraudCase: FraudCase }) {
     <div>
       <PanelTitle
         icon={Sparkles}
-        title="AI-generated reviewer summary"
-        subtitle="Generated from deterministic fraud signals. Fraud score unchanged."
+        title="Reviewer summary"
+        subtitle="Summarizes visible fraud signals only. Score is not changed."
       />
-      <div className="mt-4 rounded-lg border border-white/[0.08] bg-[#101018] p-4">
+      <div className="mt-4 rounded-lg border border-zinc-200 bg-zinc-50 p-4">
         {generated ? (
-          <p className="text-sm leading-6 text-gray-300">{summary}</p>
+          <p className="text-sm leading-6 text-zinc-700">{summary}</p>
         ) : (
-          <p className="text-sm leading-6 text-gray-400">
+          <p className="text-sm leading-6 text-zinc-600">
             Generate a concise case narrative from the visible fraud signals.
           </p>
         )}
       </div>
       <div className="mt-4 flex flex-wrap gap-2">
         <button
-          className="inline-flex min-h-10 items-center gap-2 rounded-md bg-indigo-600 px-4 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500"
+          className="inline-flex min-h-10 items-center gap-2 rounded-md bg-emerald-600 px-4 text-sm font-semibold text-white shadow-sm hover:bg-emerald-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600"
           onClick={() => setGeneratedCaseId(fraudCase.transaction_id)}
           type="button"
         >
@@ -2097,7 +2101,7 @@ function AISummaryPanel({ fraudCase }: { fraudCase: FraudCase }) {
           Generate Summary
         </button>
         <button
-          className="inline-flex min-h-10 items-center gap-2 rounded-md border border-white/10 bg-white/5 px-4 text-sm font-semibold text-gray-200 shadow-sm hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500"
+          className="inline-flex min-h-10 items-center gap-2 rounded-md border border-zinc-200 bg-white px-4 text-sm font-semibold text-zinc-800 shadow-sm hover:bg-zinc-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-950"
           onClick={handleCopy}
           type="button"
         >
@@ -2177,7 +2181,7 @@ function SearchFilters({
         <div className="relative min-w-48 flex-1">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
           <input
-            className="min-h-9 w-full rounded-md border border-white/10 bg-[#0A0A0C] py-2 pl-9 pr-3 text-sm text-white outline-none placeholder:text-gray-500 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10"
+            className="min-h-9 w-full rounded-md border border-zinc-200 bg-white py-2 pl-9 pr-3 text-sm text-zinc-900 outline-none placeholder:text-zinc-400 focus:border-zinc-950 focus:ring-2 focus:ring-zinc-950/10"
             onChange={(event) => onSearch(event.target.value)}
             placeholder="Search transactions..."
             ref={searchInputRef}
@@ -2188,7 +2192,7 @@ function SearchFilters({
 
         <select
           aria-label="Filter by severity"
-          className="min-h-9 cursor-pointer rounded-md border border-white/10 bg-[#0A0A0C] px-3 py-2 text-sm text-gray-300 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10"
+          className="min-h-9 cursor-pointer rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-700 outline-none focus:border-zinc-950 focus:ring-2 focus:ring-zinc-950/10"
           onChange={(event) =>
             updateFilter("severity", event.target.value as FiltersState["severity"])
           }
@@ -2203,7 +2207,7 @@ function SearchFilters({
 
         <select
           aria-label="Filter by status"
-          className="min-h-9 cursor-pointer rounded-md border border-white/10 bg-[#0A0A0C] px-3 py-2 text-sm text-gray-300 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10"
+          className="min-h-9 cursor-pointer rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-700 outline-none focus:border-zinc-950 focus:ring-2 focus:ring-zinc-950/10"
           onChange={(event) =>
             updateFilter("status", event.target.value as FiltersState["status"])
           }
@@ -2220,11 +2224,10 @@ function SearchFilters({
 
         <button
           aria-expanded={filtersOpen}
-          className={`inline-flex min-h-9 cursor-pointer items-center gap-1.5 rounded-md border px-3 text-sm font-medium transition-colors duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500 ${
-            filtersOpen || advancedActiveCount > 0
-              ? "border-indigo-500/50 bg-indigo-600 text-white"
-              : "border-white/10 bg-white/5 text-gray-300 hover:bg-white/10"
-          }`}
+          className={`inline-flex min-h-9 cursor-pointer items-center gap-1.5 rounded-md border px-3 text-sm font-medium transition-colors duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600 ${filtersOpen || advancedActiveCount > 0
+              ? "border-emerald-700 bg-emerald-600 text-white"
+              : "border-zinc-200 bg-white text-zinc-700 hover:bg-zinc-50"
+            }`}
           onClick={() => setFiltersOpen((open) => !open)}
           ref={filterButtonRef}
           title="Press F to toggle filters"
@@ -2234,23 +2237,21 @@ function SearchFilters({
           Filters
           {advancedActiveCount > 0 && (
             <span
-              className={`rounded-full px-1.5 py-0.5 text-xs font-semibold ${
-                filtersOpen ? "bg-white/20 text-white" : "bg-zinc-950 text-white"
-              }`}
+              className={`rounded-full px-1.5 py-0.5 text-xs font-semibold ${filtersOpen ? "bg-white/25 text-white" : "bg-emerald-700 text-white"
+                }`}
             >
               {advancedActiveCount}
             </span>
           )}
           <ChevronDown
-            className={`h-3.5 w-3.5 transition-transform duration-200 motion-reduce:transition-none ${
-              filtersOpen ? "rotate-180" : ""
-            }`}
+            className={`h-3.5 w-3.5 transition-transform duration-200 motion-reduce:transition-none ${filtersOpen ? "rotate-180" : ""
+              }`}
           />
         </button>
 
         {hasAnyActive && (
           <button
-            className="inline-flex min-h-9 cursor-pointer items-center gap-1.5 rounded-md border border-white/10 bg-white/5 px-3 text-sm font-medium text-gray-400 hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500"
+            className="inline-flex min-h-9 cursor-pointer items-center gap-1.5 rounded-md border border-zinc-200 bg-white px-3 text-sm font-medium text-zinc-600 hover:bg-zinc-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-950"
             onClick={onClearFilters}
             type="button"
           >
@@ -2262,12 +2263,11 @@ function SearchFilters({
 
       {/* Progressive disclosure: advanced filters panel */}
       <div
-        className={`grid transition-[grid-template-rows] duration-300 motion-reduce:duration-0 ${
-          filtersOpen ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
-        }`}
+        className={`grid transition-[grid-template-rows] duration-300 motion-reduce:duration-0 ${filtersOpen ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
+          }`}
       >
         <div className="overflow-hidden">
-          <div className="mt-3 grid gap-3 rounded-lg border border-white/[0.08] bg-[#101018]/80 p-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="mt-3 grid gap-3 rounded-lg border border-zinc-200 bg-zinc-50/80 p-4 sm:grid-cols-2 lg:grid-cols-3">
             <SelectControl
               label="Pattern"
               value={filters.pattern}
@@ -2293,7 +2293,7 @@ function SearchFilters({
             />
             <div className="flex justify-end sm:col-span-2 lg:col-span-3">
               <button
-                className="inline-flex min-h-9 cursor-pointer items-center gap-2 rounded-md border border-white/10 bg-white/5 px-4 text-sm font-medium text-gray-300 hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500"
+                className="inline-flex min-h-9 cursor-pointer items-center gap-2 rounded-md border border-zinc-200 bg-white px-4 text-sm font-medium text-zinc-700 hover:bg-zinc-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-950"
                 onClick={() =>
                   setFilters((current) => ({
                     ...current,
@@ -2315,6 +2315,12 @@ function SearchFilters({
   );
 }
 
+const sensitivityModeDescriptions: Record<SensitivityMode, string> = {
+  Conservative: "Fewer flags · higher precision",
+  Balanced: "Default review mode",
+  Aggressive: "More flags · higher recall",
+};
+
 function SensitivityControl({
   compact = false,
   flaggedCount,
@@ -2331,18 +2337,18 @@ function SensitivityControl({
   const [showKnobs, setShowKnobs] = useState(false);
 
   return (
-    <section className="rounded-lg border border-white/[0.08] bg-[#0A0A0C] p-4 shadow-sm">
+    <section className="rounded-xl border border-zinc-200 bg-white p-5 shadow-sm">
       <div className="flex items-center justify-between gap-3">
         <div>
-          <h2 className="text-base font-semibold text-white">
-            Sensitivity
+          <h2 className="text-base font-semibold text-zinc-950">
+            Detection Sensitivity
           </h2>
-          <p className="mt-1 text-sm text-gray-500">
-            {sensitivityProfiles[sensitivity].precision}
+          <p className="mt-1 text-sm text-zinc-500">
+            Controls how aggressively the detector flags transactions.
           </p>
         </div>
         <button
-          className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-white/10 bg-white/5 text-gray-400 shadow-sm transition hover:bg-white/10 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500"
+          className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-zinc-200 bg-white text-zinc-500 shadow-sm transition hover:bg-zinc-50 hover:text-zinc-950 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600"
           onClick={() => setShowKnobs(true)}
           type="button"
           aria-label="Open detector controls"
@@ -2357,78 +2363,80 @@ function SensitivityControl({
         {(["Conservative", "Balanced", "Aggressive"] as SensitivityMode[]).map(
           (mode) => (
             <button
-              className={`min-h-10 rounded-md px-3 text-sm font-semibold transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500 ${
-                sensitivity === mode
-                  ? "bg-indigo-600 text-white"
-                  : "border border-white/10 bg-white/5 text-gray-300 hover:bg-white/10"
-              }`}
+              className={`rounded-lg border px-3 py-2.5 text-left transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600 ${sensitivity === mode
+                  ? "border-emerald-600 bg-emerald-600 text-white"
+                  : "border-zinc-200 bg-white text-zinc-700 hover:border-zinc-300 hover:bg-zinc-50"
+                }`}
               key={mode}
               onClick={() => onChange(mode)}
               type="button"
             >
-              {mode}
+              <span className="block text-sm font-semibold">{mode}</span>
+              <span className={`mt-0.5 block text-xs ${sensitivity === mode ? "text-white/75" : "text-zinc-500"}`}>
+                {sensitivityModeDescriptions[mode]}
+              </span>
             </button>
           ),
         )}
       </div>
-      <p className="mt-4 rounded-lg border border-white/[0.08] bg-[#101018] p-3 text-sm leading-6 text-gray-400">
+      <p className="mt-4 rounded-lg border border-zinc-100 bg-zinc-50 p-3 text-sm leading-6 text-zinc-600">
         {getSensitivitySummary(sensitivity, flaggedCount, totalTransactions)}
       </p>
       {showKnobs && typeof document !== "undefined"
         ? createPortal(
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-950/50 px-4 py-6 backdrop-blur-sm"
+            onClick={() => setShowKnobs(false)}
+          >
             <div
-              className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-950/50 px-4 py-6 backdrop-blur-sm"
-              onClick={() => setShowKnobs(false)}
+              className="w-full max-w-2xl rounded-2xl border border-zinc-200 bg-white p-5 shadow-2xl"
+              onClick={(event) => event.stopPropagation()}
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="detector-controls-title"
             >
-              <div
-                className="w-full max-w-2xl rounded-2xl border border-zinc-200 bg-white p-5 shadow-2xl"
-                onClick={(event) => event.stopPropagation()}
-                role="dialog"
-                aria-modal="true"
-                aria-labelledby="detector-controls-title"
-              >
-                <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <h3
-                      id="detector-controls-title"
-                      className="text-sm font-semibold text-zinc-950"
-                    >
-                      Detector controls
-                    </h3>
-                    <p className="mt-1 text-xs leading-5 text-zinc-500">
-                      These are the main rule inputs behind the fraud detector.
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <h3
+                    id="detector-controls-title"
+                    className="text-sm font-semibold text-zinc-950"
+                  >
+                    Detector controls
+                  </h3>
+                  <p className="mt-1 text-xs leading-5 text-zinc-500">
+                    These are the main rule inputs behind the fraud detector.
+                  </p>
+                </div>
+                <button
+                  className="inline-flex h-8 w-8 items-center justify-center rounded-md text-zinc-500 transition hover:bg-zinc-100 hover:text-zinc-950"
+                  onClick={() => setShowKnobs(false)}
+                  type="button"
+                  aria-label="Close detector controls"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+              <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                {detectorKnobs.map((knob) => (
+                  <div key={knob.label} className="rounded-lg bg-zinc-50 p-3">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <span className="text-sm font-medium text-zinc-950">
+                        {knob.label}
+                      </span>
+                      <span className="rounded-full border border-zinc-200 bg-white px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-zinc-600">
+                        {knob.value}
+                      </span>
+                    </div>
+                    <p className="mt-2 text-sm leading-5 text-zinc-600">
+                      {knob.description}
                     </p>
                   </div>
-                  <button
-                    className="inline-flex h-8 w-8 items-center justify-center rounded-md text-zinc-500 transition hover:bg-zinc-100 hover:text-zinc-950"
-                    onClick={() => setShowKnobs(false)}
-                    type="button"
-                    aria-label="Close detector controls"
-                  >
-                    <X className="h-4 w-4" />
-                  </button>
-                </div>
-                <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                  {detectorKnobs.map((knob) => (
-                    <div key={knob.label} className="rounded-lg bg-zinc-50 p-3">
-                      <div className="flex flex-wrap items-center justify-between gap-2">
-                        <span className="text-sm font-medium text-zinc-950">
-                          {knob.label}
-                        </span>
-                        <span className="rounded-full border border-zinc-200 bg-white px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-zinc-600">
-                          {knob.value}
-                        </span>
-                      </div>
-                      <p className="mt-2 text-sm leading-5 text-zinc-600">
-                        {knob.description}
-                      </p>
-                    </div>
-                  ))}
-                </div>
+                ))}
               </div>
-            </div>,
-            document.body,
-          )
+            </div>
+          </div>,
+          document.body,
+        )
         : null}
     </section>
   );
@@ -2451,7 +2459,7 @@ function AuditLog({
         action={
           <div className="flex flex-wrap gap-2">
             <button
-              className="inline-flex min-h-10 items-center gap-2 rounded-md border border-white/10 bg-white/5 px-4 text-sm font-semibold text-gray-200 shadow-sm hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500"
+              className="inline-flex min-h-10 items-center gap-2 rounded-md border border-zinc-200 bg-white px-4 text-sm font-semibold text-zinc-800 shadow-sm hover:bg-zinc-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-950"
               onClick={onGoDashboard}
               type="button"
             >
@@ -2459,7 +2467,7 @@ function AuditLog({
               Dashboard
             </button>
             <button
-              className="inline-flex min-h-10 items-center gap-2 rounded-md bg-indigo-600 px-4 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500"
+              className="inline-flex min-h-10 items-center gap-2 rounded-md bg-emerald-600 px-4 text-sm font-semibold text-white shadow-sm hover:bg-emerald-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600"
               onClick={onBackToReview}
               type="button"
             >
@@ -2472,19 +2480,19 @@ function AuditLog({
         mode="Audit log"
       />
 
-      <section className="mt-6 rounded-lg border border-white/[0.08] bg-[#0A0A0C] p-5 shadow-sm">
+      <section className="mt-6 rounded-lg border border-zinc-200 bg-white p-5 shadow-sm">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h1 className="text-3xl font-semibold tracking-normal text-white">
+            <h1 className="text-3xl font-semibold tracking-normal text-zinc-950">
               Reviewer decisions
             </h1>
-            <p className="mt-2 text-sm leading-6 text-gray-400">
+            <p className="mt-2 text-sm leading-6 text-zinc-600">
               Decisions include the previous status, new status, score,
               severity, and reasons visible at action time.
             </p>
           </div>
           <button
-            className="inline-flex min-h-11 items-center gap-2 rounded-md border border-white/10 bg-white/5 px-4 text-sm font-semibold text-gray-200 shadow-sm hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500"
+            className="inline-flex min-h-11 items-center gap-2 rounded-md border border-zinc-200 bg-white px-4 text-sm font-semibold text-zinc-800 shadow-sm hover:bg-zinc-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-950"
             onClick={onExport}
             type="button"
           >
@@ -2499,25 +2507,25 @@ function AuditLog({
               actionLabel="Back to Review"
               icon={History}
               onAction={onBackToReview}
-              title="No review actions yet."
-              description="Decisions will appear here as reviewers triage cases."
+              title="No reviewer decisions yet."
+              description="Once a reviewer approves, dismisses, or escalates a case, the decision history will appear here."
             />
           </div>
         ) : (
           <div className="mt-5 space-y-3">
             {entries.map((entry) => (
               <article
-                className="rounded-lg border border-white/[0.08] bg-[#101018] p-4"
+                className="rounded-lg border border-zinc-200 bg-zinc-50 p-4"
                 key={entry.id}
               >
                 <div className="grid gap-3 md:grid-cols-[90px_130px_1fr_170px_120px] md:items-start">
                   <Fact label="Time" value={entry.time} />
                   <Fact label="Transaction ID" value={entry.transactionId} />
                   <div>
-                    <div className="text-xs font-semibold uppercase tracking-normal text-gray-500">
+                    <div className="text-xs font-semibold uppercase tracking-normal text-zinc-500">
                       Action
                     </div>
-                    <div className="mt-1 font-semibold text-white">
+                    <div className="mt-1 font-semibold text-zinc-950">
                       {entry.action}
                     </div>
                     <div className="mt-2 flex flex-wrap gap-2">
@@ -2539,7 +2547,7 @@ function AuditLog({
                     strong
                   />
                   <div>
-                    <div className="text-xs font-semibold uppercase tracking-normal text-gray-500">
+                    <div className="text-xs font-semibold uppercase tracking-normal text-zinc-500">
                       Severity
                     </div>
                     <div className="mt-1">
@@ -2572,19 +2580,19 @@ function CompletionState({
 }) {
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-4xl items-center px-5 py-8">
-      <section className="w-full rounded-lg border border-white/[0.08] bg-[#0A0A0C] p-8 text-center shadow-sm">
-        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-400">
+      <section className="w-full rounded-lg border border-zinc-200 bg-white p-8 text-center shadow-sm">
+        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-emerald-50 text-emerald-700">
           <CheckCircle2 className="h-8 w-8" />
         </div>
-        <h1 className="mt-5 text-4xl font-semibold tracking-normal text-white">
+        <h1 className="mt-5 text-4xl font-semibold tracking-normal text-zinc-950">
           Review complete.
         </h1>
-        <p className="mx-auto mt-3 max-w-2xl text-base leading-7 text-gray-400">
+        <p className="mx-auto mt-3 max-w-2xl text-base leading-7 text-zinc-600">
           Export your updated CSV or inspect the audit log.
         </p>
         <div className="mt-6 grid gap-3 sm:grid-cols-4">
           <button
-            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-md bg-indigo-600 px-4 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500"
+            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-md bg-emerald-600 px-4 text-sm font-semibold text-white shadow-sm hover:bg-emerald-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600"
             onClick={onExport}
             type="button"
           >
@@ -2592,7 +2600,7 @@ function CompletionState({
             Export CSV
           </button>
           <button
-            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-md border border-white/10 bg-white/5 px-4 text-sm font-semibold text-gray-200 shadow-sm hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500"
+            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-md border border-zinc-200 bg-white px-4 text-sm font-semibold text-zinc-800 shadow-sm hover:bg-zinc-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-950"
             onClick={onGoAudit}
             type="button"
           >
@@ -2600,7 +2608,7 @@ function CompletionState({
             Audit Log
           </button>
           <button
-            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-md border border-white/10 bg-white/5 px-4 text-sm font-semibold text-gray-200 shadow-sm hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500"
+            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-md border border-zinc-200 bg-white px-4 text-sm font-semibold text-zinc-800 shadow-sm hover:bg-zinc-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-950"
             onClick={onReviewAgain}
             type="button"
           >
@@ -2608,7 +2616,7 @@ function CompletionState({
             Review Queue
           </button>
           <button
-            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-md border border-white/10 bg-white/5 px-4 text-sm font-semibold text-gray-200 shadow-sm hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500"
+            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-md border border-zinc-200 bg-white px-4 text-sm font-semibold text-zinc-800 shadow-sm hover:bg-zinc-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-950"
             onClick={onUndo}
             type="button"
           >
@@ -2616,7 +2624,7 @@ function CompletionState({
             Undo
           </button>
         </div>
-        <p className="mt-5 text-sm font-medium text-gray-500">
+        <p className="mt-5 text-sm font-medium text-zinc-500">
           {auditEntries.length} audit decision
           {auditEntries.length === 1 ? "" : "s"} recorded.
         </p>
@@ -2627,29 +2635,27 @@ function CompletionState({
 
 function KeyboardShortcutHelp() {
   const shortcuts = [
-    ["A", "Approve Legitimate"],
-    ["D", "Dismiss Flag"],
-    ["E", "Escalate Fraud"],
+    ["A", "Approve"],
+    ["D", "Dismiss"],
+    ["E", "Escalate"],
     ["U", "Undo"],
-    ["N / ->", "Next"],
-    ["P / <-", "Previous"],
-    ["/", "Focus search"],
+    ["N / →", "Next"],
+    ["P / ←", "Prev"],
+    ["/", "Search"],
   ];
 
   return (
-    <section className="flex flex-wrap items-center gap-2">
-      <span className="text-sm font-semibold text-gray-300">Shortcuts</span>
-        {shortcuts.map(([key, label]) => (
-          <div
-            className="flex items-center gap-2 rounded-full border border-white/[0.08] bg-white/5 px-2.5 py-1 text-xs"
-            key={`${key}-${label}`}
-          >
-            <kbd className="font-mono font-semibold text-gray-200">
-              {key}
-            </kbd>
-            <span className="text-gray-500">{label}</span>
-          </div>
-        ))}
+    <section className="flex flex-wrap items-center gap-1.5">
+      <span className="text-xs font-semibold text-zinc-400 uppercase tracking-wide">Keys</span>
+      {shortcuts.map(([key, label]) => (
+        <div
+          className="flex items-center gap-1.5 rounded-md border border-zinc-200 bg-white px-2 py-1 text-xs shadow-sm"
+          key={`${key}-${label}`}
+        >
+          <kbd className="font-mono font-bold text-zinc-700">{key}</kbd>
+          <span className="text-zinc-400">{label}</span>
+        </div>
+      ))}
     </section>
   );
 }
@@ -2669,18 +2675,18 @@ function DistributionPanel({
   const max = Math.max(...rows.map(([, value]) => value), 1);
 
   return (
-    <section className="flex flex-col">
-      <h2 className="text-sm font-semibold text-white">{title}</h2>
+    <section className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm">
+      <h2 className="text-sm font-semibold text-zinc-950">{title}</h2>
       <div className="mt-4 space-y-3">
         {rows.map(([label, value]) => (
           <div key={label}>
             <div className="mb-1 flex items-center justify-between gap-3 text-sm">
-              <span className="font-medium text-gray-400">{label}</span>
-              <span className="font-semibold text-white">{value}</span>
+              <span className="font-medium text-zinc-700">{label}</span>
+              <span className="font-semibold text-zinc-950">{value}</span>
             </div>
-            <div className="h-2 overflow-hidden rounded-full bg-white/10">
+            <div className="h-2 overflow-hidden rounded-full bg-zinc-100">
               <div
-                className="h-full rounded-full bg-emerald-500"
+                className="h-full rounded-full bg-emerald-600"
                 style={{ width: `${(value / max) * 100}%` }}
               />
             </div>
@@ -2701,12 +2707,12 @@ function MetricCard({
   value: string;
 }) {
   return (
-    <div className="flex flex-col">
-      <div className="flex items-center gap-2 text-gray-500">
+    <div className="flex flex-col rounded-xl border border-zinc-200 bg-white p-5 shadow-sm">
+      <div className="flex items-center gap-2 text-zinc-500">
         <Icon className="h-4 w-4" />
         <span className="text-sm font-medium">{label}</span>
       </div>
-      <div className="mt-2 text-3xl font-medium tracking-tight text-white">{value}</div>
+      <div className="mt-3 text-3xl font-semibold tracking-tight text-zinc-950">{value}</div>
     </div>
   );
 }
@@ -2726,25 +2732,30 @@ function ReviewActionButton({
 }) {
   const toneClass =
     tone === "approve"
-      ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/20"
+      ? "border-emerald-600 bg-emerald-600 text-white hover:bg-emerald-700 hover:border-emerald-700"
       : tone === "escalate"
-        ? "border-red-500/30 bg-red-500/10 text-red-300 hover:bg-red-500/20"
-        : "border-white/10 bg-white/5 text-gray-200 hover:bg-white/10";
+        ? "border-red-600 bg-red-600 text-white hover:bg-red-700 hover:border-red-700"
+        : "border-zinc-200 bg-white text-zinc-800 hover:bg-zinc-50";
+
+  const kbdClass =
+    tone === "dismiss"
+      ? "border-zinc-200 bg-zinc-100 text-zinc-600"
+      : "border-white/30 bg-white/20 text-white";
 
   return (
     <button
-      className={`flex min-h-16 items-center justify-between gap-3 rounded-lg border p-3 text-left shadow-sm transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-950 ${toneClass}`}
+      className={`flex min-h-16 items-center justify-between gap-3 rounded-xl border p-4 text-left shadow-sm transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600 ${toneClass}`}
       onClick={onClick}
       type="button"
     >
       <span className="flex items-center gap-3">
-        <Icon className="h-5 w-5" />
+        <Icon className="h-5 w-5 shrink-0" />
         <span>
-          <span className="block text-base font-semibold">{label}</span>
-          <span className="mt-0.5 block text-xs opacity-80">Shortcut {shortcut}</span>
+          <span className="block text-sm font-bold">{label}</span>
+          <span className="mt-0.5 block text-xs opacity-75">Press {shortcut}</span>
         </span>
       </span>
-      <kbd className="rounded-md border border-current/20 bg-black/40 px-2 py-1 font-mono text-xs font-semibold">
+      <kbd className={`rounded-md border px-2 py-1 font-mono text-xs font-bold ${kbdClass}`}>
         {shortcut}
       </kbd>
     </button>
@@ -2753,10 +2764,10 @@ function ReviewActionButton({
 
 function SeverityBadge({ severity }: { severity: Severity }) {
   const className: Record<Severity, string> = {
-    Low: "border-emerald-500/30 bg-emerald-500/10 text-emerald-400",
-    Medium: "border-amber-500/30 bg-amber-500/10 text-amber-400",
-    High: "border-orange-500/30 bg-orange-500/10 text-orange-400",
-    Critical: "border-red-500/30 bg-red-500/10 text-red-400",
+    Low: "border-emerald-200 bg-emerald-50 text-emerald-800",
+    Medium: "border-amber-200 bg-amber-50 text-amber-900",
+    High: "border-orange-200 bg-orange-50 text-orange-900",
+    Critical: "border-red-200 bg-red-50 text-red-800",
   };
 
   return (
@@ -2770,7 +2781,7 @@ function SeverityBadge({ severity }: { severity: Severity }) {
 
 function PatternBadge({ pattern }: { pattern: string }) {
   return (
-    <span className="inline-flex items-center rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-semibold text-gray-400">
+    <span className="inline-flex items-center rounded-full border border-zinc-200 bg-zinc-50 px-3 py-1 text-xs font-semibold text-zinc-700">
       {formatPattern(pattern)}
     </span>
   );
@@ -2787,7 +2798,7 @@ function ReasonList({
     <ol className={`list-decimal space-y-2 pl-5 ${compact ? "mt-3" : "mt-3"}`}>
       {reasons.map((reason) => (
         <li
-          className={`${compact ? "text-sm" : "text-base"} leading-6 text-gray-400`}
+          className={`${compact ? "text-sm" : "text-base"} leading-6 text-zinc-700`}
           key={reason}
         >
           {reason}
@@ -2808,11 +2819,11 @@ function Fact({
 }) {
   return (
     <div>
-      <div className="text-xs font-semibold uppercase tracking-normal text-gray-500">
+      <div className="text-xs font-semibold uppercase tracking-normal text-zinc-500">
         {label}
       </div>
       <div
-        className={`mt-1 break-words ${strong ? "text-lg font-semibold text-white" : "text-sm font-medium text-gray-300"}`}
+        className={`mt-1 break-words ${strong ? "text-lg font-semibold text-zinc-950" : "text-sm font-medium text-zinc-800"}`}
       >
         {value}
       </div>
@@ -2834,10 +2845,10 @@ function SelectControl({
   value: string;
 }) {
   return (
-    <label className="block text-sm font-semibold text-gray-400">
+    <label className="block text-sm font-semibold text-zinc-700">
       {label}
       <select
-        className="mt-2 min-h-11 w-full rounded-md border border-white/10 bg-[#0A0A0C] px-3 py-2 text-sm text-white shadow-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10"
+        className="mt-2 min-h-11 w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 shadow-sm outline-none focus:border-zinc-950 focus:ring-2 focus:ring-zinc-950/10"
         onChange={(event) => onChange(event.target.value)}
         value={value}
       >
@@ -2854,7 +2865,7 @@ function SelectControl({
 function ExportButton({ onExport }: { onExport: () => void }) {
   return (
     <button
-      className="inline-flex min-h-10 items-center gap-2 rounded-md border border-white/10 bg-white/5 px-4 text-sm font-semibold text-gray-200 shadow-sm hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500"
+      className="inline-flex min-h-10 items-center gap-2 rounded-md border border-zinc-200 bg-white px-4 text-sm font-semibold text-zinc-800 shadow-sm hover:bg-zinc-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-950"
       onClick={onExport}
       type="button"
     >
@@ -2878,17 +2889,17 @@ function EmptyState({
   title: string;
 }) {
   return (
-    <section className="rounded-lg border border-dashed border-white/[0.08] bg-[#0A0A0C] p-8 text-center shadow-sm">
-      <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-white/10 text-gray-400">
+    <section className="rounded-lg border border-dashed border-zinc-300 bg-white p-8 text-center shadow-sm">
+      <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-zinc-100 text-zinc-600">
         <Icon className="h-6 w-6" />
       </div>
-      <h2 className="mt-4 text-xl font-semibold text-white">{title}</h2>
-      <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-gray-400">
+      <h2 className="mt-4 text-xl font-semibold text-zinc-950">{title}</h2>
+      <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-zinc-600">
         {description}
       </p>
       {actionLabel && onAction && (
         <button
-          className="mt-5 inline-flex min-h-10 items-center justify-center rounded-md bg-indigo-600 px-4 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500"
+          className="mt-5 inline-flex min-h-10 items-center justify-center rounded-md bg-emerald-600 px-4 text-sm font-semibold text-white shadow-sm hover:bg-emerald-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600"
           onClick={onAction}
           type="button"
         >
@@ -2909,8 +2920,8 @@ function LoadingState({
   title: string;
 }) {
   return (
-    <section className="mt-5 rounded-lg border border-white/[0.08] bg-[#101018] p-4">
-      <div className="flex items-center gap-2 text-sm font-semibold text-white">
+    <section className="mt-5 rounded-lg border border-zinc-200 bg-zinc-50 p-4">
+      <div className="flex items-center gap-2 text-sm font-semibold text-zinc-950">
         <Loader2 className="h-4 w-4 animate-spin" />
         {title}
       </div>
@@ -2922,17 +2933,17 @@ function LoadingState({
           >
             <span
               className={
-                index <= currentStep ? "font-semibold text-gray-200" : "text-gray-500"
+                index <= currentStep ? "font-semibold text-zinc-900" : "text-zinc-500"
               }
             >
               {step}
             </span>
             {index < currentStep ? (
-              <CheckCircle2 className="h-4 w-4 text-emerald-400" />
+              <CheckCircle2 className="h-4 w-4 text-emerald-600" />
             ) : index === currentStep ? (
-              <Loader2 className="h-4 w-4 animate-spin text-gray-400" />
+              <Loader2 className="h-4 w-4 animate-spin text-zinc-600" />
             ) : (
-              <span className="h-4 w-4 rounded-full border border-white/20" />
+              <span className="h-4 w-4 rounded-full border border-zinc-300" />
             )}
           </div>
         ))}
@@ -2943,10 +2954,10 @@ function LoadingState({
 
 function Toast({ messages }: { messages: ToastMessage[] }) {
   const toneClass: Record<ToastTone, string> = {
-    success: "border-emerald-500/30 bg-[#0A0A0C] text-emerald-300",
-    info: "border-sky-500/30 bg-[#0A0A0C] text-sky-300",
-    warning: "border-amber-500/30 bg-[#0A0A0C] text-amber-300",
-    error: "border-red-500/30 bg-[#0A0A0C] text-red-300",
+    success: "border-emerald-200 bg-emerald-50 text-emerald-900",
+    info: "border-sky-200 bg-sky-50 text-sky-900",
+    warning: "border-amber-200 bg-amber-50 text-amber-950",
+    error: "border-red-200 bg-red-50 text-red-900",
   };
 
   return (
@@ -2976,10 +2987,10 @@ function AppHeader({
   mode: string;
 }) {
   return (
-    <header className="flex flex-col gap-4 border-b border-white/[0.08] pb-4 lg:flex-row lg:items-center lg:justify-between">
+    <header className="flex flex-col gap-4 border-b border-zinc-200 pb-4 lg:flex-row lg:items-center lg:justify-between">
       <div className="flex flex-wrap items-center gap-3">
         {!hideBrand && <BrandMark />}
-        <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-sm font-semibold text-gray-400 shadow-sm">
+        <span className="rounded-full border border-zinc-200 bg-white px-3 py-1 text-sm font-semibold text-zinc-600 shadow-sm">
           {mode}
         </span>
       </div>
@@ -2991,7 +3002,7 @@ function AppHeader({
 function FrogIcon({ size = 40 }: { size?: number }) {
   return (
     <div
-      className="flex shrink-0 items-center justify-center rounded-full bg-[#0A0A0C] shadow-sm ring-1 ring-white/10 overflow-hidden"
+      className="flex shrink-0 items-center justify-center rounded-full bg-white shadow-sm ring-1 ring-zinc-200 overflow-hidden"
       style={{ width: size, height: size }}
     >
       {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -3009,10 +3020,10 @@ function BrandMark() {
     <div className="flex items-center gap-3">
       <FrogIcon size={40} />
       <div>
-        <div className="text-xl font-semibold tracking-normal text-white">
+        <div className="text-xl font-semibold tracking-normal text-zinc-950">
           FraudFrog
         </div>
-        <div className="text-sm font-medium text-gray-500">
+        <div className="text-sm font-medium text-zinc-500">
           Leap Ahead of Fraud
         </div>
       </div>
@@ -3038,12 +3049,12 @@ function Sidebar({
   view: View;
 }) {
   return (
-    <aside className="sticky top-0 flex h-screen w-56 shrink-0 flex-col border-r border-white/[0.08] bg-[#050505]">
-      <div className="flex items-center gap-2.5 border-b border-white/[0.08] px-4 py-4">
+    <aside className="sticky top-0 flex h-screen w-56 shrink-0 flex-col border-r border-zinc-200 bg-white">
+      <div className="flex items-center gap-2.5 border-b border-zinc-200 bg-emerald-50/60 px-4 py-4">
         <FrogIcon size={34} />
         <div>
-          <div className="text-sm font-semibold text-white">FraudFrog</div>
-          <div className="text-xs text-gray-500">Leap Ahead of Fraud</div>
+          <div className="text-sm font-semibold text-zinc-950">FraudFrog</div>
+          <div className="text-xs text-zinc-500">Leap Ahead of Fraud</div>
         </div>
       </div>
 
@@ -3076,7 +3087,7 @@ function Sidebar({
         />
       </nav>
 
-      <div className="border-t border-white/[0.08] px-3 py-3">
+      <div className="border-t border-zinc-200 px-3 py-3">
         <NavItem
           icon={Upload}
           label="Upload New CSV"
@@ -3103,11 +3114,10 @@ function NavItem({
   return (
     <button
       aria-current={active ? "page" : undefined}
-      className={`flex w-full cursor-pointer items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500 ${
-        active
-          ? "bg-indigo-600/20 text-indigo-300"
-          : "text-gray-400 hover:bg-white/5 hover:text-white"
-      }`}
+      className={`flex w-full cursor-pointer items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600 ${active
+          ? "bg-emerald-600 text-white"
+          : "text-zinc-600 hover:bg-emerald-50 hover:text-zinc-950"
+        }`}
       onClick={onClick}
       type="button"
     >
@@ -3115,9 +3125,8 @@ function NavItem({
       <span className="flex-1 text-left">{label}</span>
       {badge != null && badge > 0 && (
         <span
-          className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
-            active ? "bg-white/20 text-white" : "bg-white/10 text-gray-400"
-          }`}
+          className={`rounded-full px-2 py-0.5 text-xs font-semibold ${active ? "bg-white/25 text-white" : "bg-emerald-100 text-emerald-800"
+            }`}
         >
           {badge}
         </span>
@@ -3137,12 +3146,12 @@ function PanelTitle({
 }) {
   return (
     <div className="flex items-start gap-3">
-      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-white/10 text-gray-400">
+      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-emerald-50 text-emerald-700">
         <Icon className="h-5 w-5" />
       </div>
       <div>
-        <h2 className="text-base font-semibold text-white">{title}</h2>
-        <p className="mt-1 text-sm leading-5 text-gray-500">{subtitle}</p>
+        <h2 className="text-base font-semibold text-zinc-950">{title}</h2>
+        <p className="mt-1 text-sm leading-5 text-zinc-500">{subtitle}</p>
       </div>
     </div>
   );
@@ -3340,15 +3349,15 @@ function PieChart({
       ).segments;
 
   return (
-    <div className="rounded-xl border border-white/[0.08] bg-[#0A0A0C] p-6 shadow-sm">
-      <h2 className="text-lg font-semibold text-white">{title}</h2>
+    <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm">
+      <h2 className="text-lg font-semibold text-zinc-950">{title}</h2>
       {subtitle && (
-        <p className="mt-1 text-sm text-gray-500">{subtitle}</p>
+        <p className="mt-1 text-sm text-zinc-500">{subtitle}</p>
       )}
 
       {total === 0 ? (
-        <div className="mt-5 flex h-32 items-center justify-center rounded-lg bg-[#101018] text-sm text-gray-500">
-          No data yet — upload a CSV to see this chart.
+        <div className="mt-5 flex h-32 items-center justify-center rounded-lg bg-zinc-50 text-sm text-zinc-400">
+          No data yet - upload a CSV to see this chart.
         </div>
       ) : (
         <div className="mt-5 flex flex-col items-center gap-6 sm:flex-row">
@@ -3358,7 +3367,7 @@ function PieChart({
             ))}
             <text
               dominantBaseline="middle"
-              fill="#ffffff"
+              fill="#09090b"
               fontSize={20}
               fontWeight={600}
               textAnchor="middle"
@@ -3369,7 +3378,7 @@ function PieChart({
             </text>
             <text
               dominantBaseline="middle"
-              fill="#6b7280"
+              fill="#71717a"
               fontSize={11}
               textAnchor="middle"
               x={cx}
@@ -3386,13 +3395,13 @@ function PieChart({
                   className="h-2.5 w-2.5 shrink-0 rounded-full"
                   style={{ backgroundColor: segment.color }}
                 />
-                <span className="flex-1 truncate text-sm text-gray-400">
+                <span className="flex-1 truncate text-sm text-zinc-600">
                   {segment.label}
                 </span>
-                <span className="text-sm font-semibold text-white">
+                <span className="text-sm font-semibold text-zinc-950">
                   {Math.round((segment.value / total) * 100)}%
                 </span>
-                <span className="w-10 text-right text-sm text-gray-500">
+                <span className="w-10 text-right text-sm text-zinc-400">
                   {segment.value.toLocaleString()}
                 </span>
               </div>
