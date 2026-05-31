@@ -77,7 +77,6 @@ import {
   Pie,
   PieChart as RechartsPieChart,
 } from "recharts";
-import { AuraBackground } from "@/components/ui/aura-background";
 import { GridScan } from "@/components/ui/GridScan";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 
@@ -1209,8 +1208,20 @@ function UploadScreen({
 
   return (
     <main className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden bg-black text-white px-5 py-16">
-      {/* ── Aura animated background ───────────────────────────────── */}
-      <AuraBackground />
+      {/* ── GridScan animated background ───────────────────────────── */}
+      <GridScan
+        style={{ position: "absolute", inset: 0, zIndex: 0 }}
+        sensitivity={0.55}
+        lineThickness={1}
+        linesColor="#2F293A"
+        gridScale={0.1}
+        scanColor="#10B981"
+        scanOpacity={0.4}
+        enablePost
+        bloomIntensity={0.6}
+        chromaticAberration={0.002}
+        noiseIntensity={0.01}
+      />
 
       {/* ── HERO: centered title + description ──────────────────────── */}
       <div className="relative z-10 w-full max-w-xl text-center">
@@ -3591,16 +3602,16 @@ function PieChart({
   };
 
   return (
-    <Card className="flex flex-col rounded-xl bg-[#0A0A0C] border-white/[0.08] shadow-xl hover:border-white/[0.15] transition-colors duration-200 text-white">
+    <Card className="flex flex-col rounded-xl bg-white border-zinc-200 shadow-sm hover:border-zinc-300 transition-colors duration-200 text-zinc-950">
       <CardHeader className="items-start pb-2 px-6 pt-5">
-        <CardTitle className="text-lg font-semibold text-white">{title}</CardTitle>
+        <CardTitle className="text-lg font-semibold text-zinc-950">{title}</CardTitle>
         {subtitle && (
-          <CardDescription className="text-sm text-gray-500 mt-1">{subtitle}</CardDescription>
+          <CardDescription className="text-sm text-zinc-500 mt-1">{subtitle}</CardDescription>
         )}
       </CardHeader>
       <CardContent className="flex-1 px-6 pb-5 pt-0">
         {total === 0 ? (
-          <div className="mt-2 flex h-32 items-center justify-center rounded-lg bg-[#101018] text-sm text-gray-500">
+          <div className="mt-2 flex h-32 items-center justify-center rounded-lg bg-zinc-50 text-sm text-zinc-500">
             No data yet — upload a CSV to see this chart.
           </div>
         ) : (
@@ -3639,11 +3650,11 @@ function PieChart({
                     className="h-2.5 w-2.5 shrink-0 rounded-full"
                     style={{ backgroundColor: d.color }}
                   />
-                  <span className="flex-1 truncate text-sm text-gray-400">{d.label}</span>
-                  <span className="text-sm font-semibold text-white">
+                  <span className="flex-1 truncate text-sm text-zinc-600">{d.label}</span>
+                  <span className="text-sm font-semibold text-zinc-950">
                     {Math.round((d.value / total) * 100)}%
                   </span>
-                  <span className="w-10 text-right text-sm text-gray-500">
+                  <span className="w-10 text-right text-sm text-zinc-400">
                     {d.value.toLocaleString()}
                   </span>
                 </div>
