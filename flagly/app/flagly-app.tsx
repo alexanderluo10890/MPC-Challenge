@@ -3065,7 +3065,7 @@ function Sidebar({
   return (
     <aside className="sticky top-0 flex h-screen w-56 shrink-0 flex-col border-r border-zinc-200 bg-white">
       <div className="flex items-center gap-2.5 border-b border-zinc-200 bg-emerald-50/60 px-4 py-4">
-        <FrogIcon size={34} />
+        <FrogIcon size={42} />
         <div>
           <div className="text-sm font-semibold text-zinc-950">FraudFrog</div>
           <div className="text-xs text-zinc-500">Leap Ahead of Fraud</div>
