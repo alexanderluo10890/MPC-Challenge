@@ -72,7 +72,9 @@ export function FraudSwipeStack({
 }: FraudSwipeStackProps) {
   const [currentIdx, setCurrentIdx] = useState(0);
   const [detailCase, setDetailCase] = useState<FraudCase | null>(null);
-  const [swiping, setSwiping] = useState(false);
+  // useRef instead of useState — no re-render mid-animation, so Framer
+  // never sees drag flip false→true and doesn't reset the position.
+  const swipingRef = useRef(false);
 
   const x = useMotionValue(0);
   const y = useMotionValue(0);
@@ -85,34 +87,34 @@ export function FraudSwipeStack({
   const visibleCases = cases.slice(currentIdx, currentIdx + 3);
 
   const swipe = useCallback(
-    async (dir: "left" | "right" | "down") => {
-      if (swiping || isDone) return;
+    (dir: "left" | "right" | "down") => {
+      if (swipingRef.current || currentIdx >= cases.length) return;
       const fraudCase = cases[currentIdx];
       if (!fraudCase) return;
 
-      setSwiping(true);
+      swipingRef.current = true;
 
-      // Fire callback immediately
       if (dir === "right") onApprove(fraudCase.transaction_id);
       else if (dir === "left") onFraud(fraudCase.transaction_id);
       else onReview?.(fraudCase.transaction_id);
 
-      // Animate card off-screen
-      const xTarget = dir === "right" ? 640 : dir === "left" ? -640 : 0;
-      const yTarget = dir === "down" ? 640 : dir === "right" ? -40 : 40;
+      // Exit targets — card starts from wherever drag left it, then flies out
+      const xTarget = dir === "right" ? 620 : dir === "left" ? -620 : 0;
+      const yTarget = dir === "down" ? 620 : dir === "right" ? -40 : 40;
 
-      await Promise.all([
-        animateMV(x, xTarget, { duration: 0.32, ease: [0.32, 0, 0.67, 0] }),
-        animateMV(y, yTarget, { duration: 0.32, ease: [0.32, 0, 0.67, 0] }),
-      ]);
-
-      // Reset position before advancing (card is gone)
-      x.set(0);
-      y.set(0);
-      setCurrentIdx((i) => i + 1);
-      setSwiping(false);
+      // Promise.then instead of await — keeps this function synchronous so
+      // no state update happens until the animation fully completes.
+      void Promise.all([
+        animateMV(x, xTarget, { duration: 0.3, ease: [0.4, 0, 1, 1] }),
+        animateMV(y, yTarget, { duration: 0.3, ease: [0.4, 0, 1, 1] }),
+      ]).then(() => {
+        x.set(0);
+        y.set(0);
+        setCurrentIdx((i) => i + 1);
+        swipingRef.current = false;
+      });
     },
-    [swiping, isDone, cases, currentIdx, onApprove, onFraud, onReview, x, y],
+    [cases, currentIdx, onApprove, onFraud, onReview, x, y],
   );
 
   // Keyboard shortcuts
@@ -207,25 +209,38 @@ export function FraudSwipeStack({
                   ? { x, y, rotate, zIndex: 30 }
                   : { zIndex: 30 - i * 10 }
               }
-              initial={{ scale, y: yOffset + 20, opacity: 0 }}
-              animate={{
-                scale,
-                y: yOffset,
-                opacity: 1,
-                transition: { duration: 0.3, ease: "easeOut" },
-              }}
-              drag={isTop && !swiping ? true : false}
-              dragConstraints={{ left: 0, right: 0, top: 0, bottom: 0 }}
-              dragElastic={0.65}
+              // Top card: omit `y` from animate — the motion value in `style`
+              // owns the y axis. Including y here creates two controllers on
+              // the same property and the animate controller wins, blocking
+              // animateMV from moving the card off-screen.
+              initial={isTop
+                ? { scale: 1, opacity: 0 }
+                : { scale, y: yOffset + 20, opacity: 0 }
+              }
+              animate={isTop
+                ? { scale: 1, opacity: 1 }
+                : { scale, y: yOffset, opacity: 1 }
+              }
+              transition={{ duration: 0.3, ease: "easeOut" }}
+              drag={isTop}
+              // Large box so there is no effective boundary and no spring-back
+              // force on release. With tight constraints (left:0, right:0) Framer
+              // fires a spring back to 0 the moment onDragEnd fires, which
+              // directly fights our animateMV call and causes cards to stick.
+              dragConstraints={{ left: -1000, right: 1000, top: -1000, bottom: 1000 }}
+              dragElastic={0.1}
+              // Disable momentum so the card stops exactly where the finger
+              // lifts — no Framer-internal velocity animation to compete with.
+              dragMomentum={false}
               onDragEnd={(_, info) => {
+                if (swipingRef.current) return;
                 const absX = Math.abs(info.offset.x);
                 const absY = info.offset.y;
                 if (absX > 80 && absX > Math.abs(absY)) {
-                  void swipe(info.offset.x > 0 ? "right" : "left");
+                  swipe(info.offset.x > 0 ? "right" : "left");
                 } else if (absY > 80 && absY > absX) {
-                  void swipe("down");
+                  swipe("down");
                 } else {
-                  // Snap back with spring
                   void animateMV(x, 0, { type: "spring", stiffness: 380, damping: 28 });
                   void animateMV(y, 0, { type: "spring", stiffness: 380, damping: 28 });
                 }
