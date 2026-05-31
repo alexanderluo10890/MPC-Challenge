@@ -186,10 +186,10 @@ const severityOrder: Record<Severity, number> = {
 };
 
 const statusTone: Record<ReviewStatus, string> = {
-  unreviewed: "border-zinc-200 bg-white text-zinc-700",
-  approved_legitimate: "border-emerald-200 bg-emerald-50 text-emerald-800",
-  dismissed_flag: "border-zinc-300 bg-zinc-100 text-zinc-700",
-  escalated_fraud: "border-red-200 bg-red-50 text-red-800",
+  unreviewed: "border-white/10 bg-white/5 text-gray-400",
+  approved_legitimate: "border-emerald-500/30 bg-emerald-500/10 text-emerald-400",
+  dismissed_flag: "border-white/10 bg-white/5 text-gray-400",
+  escalated_fraud: "border-red-500/30 bg-red-500/10 text-red-400",
 };
 
 const wait = (ms: number) =>
@@ -769,7 +769,7 @@ export default function FraudFrogApp() {
   const transitionIn = { duration: prefersReducedMotion ? 0 : 0.38, ease: [0, 0, 0.2, 1] as const, delay: prefersReducedMotion ? 0 : 0.06 };
 
   return (
-    <div className="min-h-screen bg-[#f5f7f8] text-zinc-950">
+    <div className="min-h-screen bg-black text-white">
       <AnimatePresence mode="wait" initial={false}>
         {view === "upload" ? (
           <motion.div
@@ -891,15 +891,15 @@ export default function FraudFrogApp() {
 
             {view === "swipe" && (
               <main className="w-full">
-                <div className="border-b border-zinc-200 px-5 py-4 sm:px-8">
+                <div className="border-b border-white/[0.08] px-5 py-4 sm:px-8">
                   <div className="flex items-center justify-between">
                     <div>
-                      <h1 className="text-lg font-semibold text-zinc-950">Quick Review</h1>
-                      <p className="mt-0.5 text-sm text-zinc-500">
+                      <h1 className="text-lg font-semibold text-white">Quick Review</h1>
+                      <p className="mt-0.5 text-sm text-gray-500">
                         Swipe right to approve, left to escalate, down to defer.
                       </p>
                     </div>
-                    <span className="rounded-full border border-zinc-200 bg-white px-3 py-1 text-sm font-semibold text-zinc-600 shadow-sm">
+                    <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-sm font-semibold text-gray-400 shadow-sm">
                       {unreviewedCases.length} remaining
                     </span>
                   </div>
@@ -1175,7 +1175,7 @@ function Dashboard({
           <div className="flex flex-wrap gap-2">
             <ExportButton onExport={onExport} />
             <button
-              className="inline-flex min-h-10 items-center gap-2 rounded-md border border-zinc-200 bg-white px-4 text-sm font-semibold text-zinc-800 shadow-sm hover:bg-zinc-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-950"
+              className="inline-flex min-h-10 items-center gap-2 rounded-md border border-white/10 bg-white/5 px-4 text-sm font-semibold text-gray-200 shadow-sm hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500"
               onClick={onOpenAudit}
               type="button"
             >
@@ -1190,21 +1190,21 @@ function Dashboard({
 
       <section className="mt-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <p className="text-sm font-semibold text-emerald-700">
+          <p className="text-sm font-semibold text-emerald-400">
             Analysis ready
           </p>
-          <h1 className="mt-1 text-3xl font-semibold tracking-normal text-zinc-950">
+          <h1 className="mt-1 text-3xl font-semibold tracking-normal text-white">
             {projectedFlaggedCount} of {number.format(totalTransactions)}{" "}
             transactions need reviewer triage.
           </h1>
-          <p className="mt-2 max-w-3xl text-sm leading-6 text-zinc-600">
+          <p className="mt-2 max-w-3xl text-sm leading-6 text-gray-400">
             {datasetSummary.fileName} processed. The detector finds the signal;
             the reviewer keeps the final say.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
           <button
-            className="inline-flex min-h-11 items-center gap-2 rounded-md bg-zinc-950 px-5 text-sm font-semibold text-white shadow-sm hover:bg-zinc-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-950"
+            className="inline-flex min-h-11 items-center gap-2 rounded-md bg-indigo-600 px-5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500"
             onClick={onOpenReview}
             type="button"
           >
@@ -1212,7 +1212,7 @@ function Dashboard({
             Start Review
           </button>
           <button
-            className="inline-flex min-h-11 items-center gap-2 rounded-md border border-zinc-200 bg-white px-5 text-sm font-semibold text-zinc-800 shadow-sm hover:bg-zinc-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-950"
+            className="inline-flex min-h-11 items-center gap-2 rounded-md border border-white/10 bg-white/5 px-5 text-sm font-semibold text-gray-200 shadow-sm hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500"
             onClick={onOpenReview}
             type="button"
           >
@@ -1273,50 +1273,50 @@ function Dashboard({
       </section>
 
       <section className="mt-5 grid gap-5 lg:grid-cols-[1fr_360px]">
-        <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm">
+        <div className="rounded-xl border border-white/[0.08] bg-[#0A0A0C] p-6 shadow-sm">
           <div className="flex items-center justify-between gap-4">
             <div>
-              <h2 className="text-lg font-semibold text-zinc-950">
+              <h2 className="text-lg font-semibold text-white">
                 Top Issues
               </h2>
-              <p className="mt-1 text-sm text-zinc-500">
+              <p className="mt-1 text-sm text-gray-500">
                 Highest-signal findings from the current upload.
               </p>
             </div>
-            <BarChart3 className="h-5 w-5 text-zinc-500" />
+            <BarChart3 className="h-5 w-5 text-gray-500" />
           </div>
           <div className="mt-5 grid gap-3 md:grid-cols-3">
             {buildTopIssues(allScoredCases).slice(0, 3).map(([label, value, meta]) => (
               <div
                 key={label}
-                className="rounded-lg bg-zinc-50 p-4"
+                className="rounded-lg bg-[#101018] p-4"
               >
-                <div className="text-xs font-semibold uppercase tracking-normal text-zinc-500">
+                <div className="text-xs font-semibold uppercase tracking-normal text-gray-500">
                   {label}
                 </div>
-                <div className="mt-2 text-base font-semibold text-zinc-950">
+                <div className="mt-2 text-base font-semibold text-white">
                   {value}
                 </div>
-                <div className="mt-1 text-sm text-zinc-600">{meta}</div>
+                <div className="mt-1 text-sm text-gray-400">{meta}</div>
               </div>
             ))}
           </div>
         </div>
 
-        <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm">
-          <h2 className="text-sm font-semibold text-zinc-950">Session</h2>
-          <p className="mt-2 text-sm leading-6 text-zinc-600">
+        <div className="rounded-xl border border-white/[0.08] bg-[#0A0A0C] p-6 shadow-sm">
+          <h2 className="text-sm font-semibold text-white">Session</h2>
+          <p className="mt-2 text-sm leading-6 text-gray-400">
             {auditEntries.length === 0
               ? "No review actions yet."
               : `${auditEntries.length} decision${
                   auditEntries.length === 1 ? "" : "s"
                 } recorded. ${escalatedCount} escalated.`}
           </p>
-          <p className="mt-2 text-sm text-zinc-500">
+          <p className="mt-2 text-sm text-gray-500">
             {reviewedCount} of {cases.length} current cases reviewed.
           </p>
           <button
-            className="mt-5 inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-md border border-zinc-200 bg-white px-4 text-sm font-semibold text-zinc-800 shadow-sm hover:bg-zinc-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-950"
+            className="mt-5 inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-md border border-white/10 bg-white/5 px-4 text-sm font-semibold text-gray-200 shadow-sm hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500"
             onClick={onOpenAudit}
             type="button"
           >
@@ -1388,7 +1388,7 @@ function ReviewQueue({
         action={
           <div className="flex flex-wrap items-center gap-2">
             <button
-              className="inline-flex min-h-10 items-center gap-2 rounded-md border border-zinc-200 bg-white px-4 text-sm font-semibold text-zinc-800 shadow-sm hover:bg-zinc-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-950"
+              className="inline-flex min-h-10 items-center gap-2 rounded-md border border-white/10 bg-white/5 px-4 text-sm font-semibold text-gray-200 shadow-sm hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500"
               onClick={onGoDashboard}
               type="button"
             >
@@ -1396,7 +1396,7 @@ function ReviewQueue({
               Dashboard
             </button>
             <button
-              className="inline-flex min-h-10 items-center gap-2 rounded-md border border-zinc-200 bg-white px-4 text-sm font-semibold text-zinc-800 shadow-sm hover:bg-zinc-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-950"
+              className="inline-flex min-h-10 items-center gap-2 rounded-md border border-white/10 bg-white/5 px-4 text-sm font-semibold text-gray-200 shadow-sm hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500"
               onClick={onGoAudit}
               type="button"
             >
@@ -1410,25 +1410,25 @@ function ReviewQueue({
         mode="Review Queue"
       />
 
-      <div className="mt-4 rounded-xl border border-zinc-200 bg-white px-4 py-3 shadow-sm">
+      <div className="mt-4 rounded-xl border border-white/[0.08] bg-[#0A0A0C] px-4 py-3 shadow-sm">
         <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <div>
             <div className="flex flex-wrap items-center gap-2">
-              <span className="rounded-full bg-zinc-950 px-3 py-1 text-sm font-semibold text-white">
+              <span className="rounded-full bg-indigo-600 px-3 py-1 text-sm font-semibold text-white">
                 Triage Card
               </span>
-              <span className="text-sm font-medium text-zinc-600">
+              <span className="text-sm font-medium text-gray-400">
                 {reviewedCount} of {cases.length} cases reviewed
               </span>
             </div>
-            <div className="mt-3 h-2 overflow-hidden rounded-full bg-zinc-100">
+            <div className="mt-3 h-2 overflow-hidden rounded-full bg-white/10">
               <div
-                className="h-full rounded-full bg-emerald-600"
+                className="h-full rounded-full bg-emerald-500"
                 style={{ width: `${reviewProgress}%` }}
               />
             </div>
           </div>
-          <div className="text-sm font-medium text-zinc-600">
+          <div className="text-sm font-medium text-gray-400">
             {filteredCases.length} matching case
             {filteredCases.length === 1 ? "" : "s"}
           </div>
@@ -1448,14 +1448,14 @@ function ReviewQueue({
         <div className="mt-2 flex flex-wrap items-center justify-between gap-2 px-0.5">
           <KeyboardShortcutHelp />
           <div className="flex items-center gap-1.5">
-            <SlidersHorizontal className="h-3.5 w-3.5 text-zinc-400" />
+            <SlidersHorizontal className="h-3.5 w-3.5 text-gray-500" />
             {(["Conservative", "Balanced", "Aggressive"] as SensitivityMode[]).map(
               (mode) => (
                 <button
-                  className={`min-h-7 cursor-pointer rounded px-2.5 text-xs font-medium transition-colors duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-950 ${
+                  className={`min-h-7 cursor-pointer rounded px-2.5 text-xs font-medium transition-colors duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500 ${
                     sensitivity === mode
-                      ? "bg-zinc-950 text-white"
-                      : "border border-zinc-200 bg-white text-zinc-600 hover:bg-zinc-50"
+                      ? "bg-indigo-600 text-white"
+                      : "border border-white/10 bg-white/5 text-gray-300 hover:bg-white/10"
                   }`}
                   key={mode}
                   onClick={() => onSensitivityChange(mode)}
@@ -1538,17 +1538,17 @@ function TransactionReviewCard({
     .join(" + ");
 
   return (
-    <article className="overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-sm">
-      <div className="border-b border-zinc-200 p-5">
+    <article className="overflow-hidden rounded-xl border border-white/[0.08] bg-[#0A0A0C] shadow-sm">
+      <div className="border-b border-white/[0.08] p-5">
         <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
           <div>
-            <p className="text-sm font-semibold text-zinc-500">
+            <p className="text-sm font-semibold text-gray-500">
               Case {caseNumber} of {matchingCount}
             </p>
-            <h2 className="mt-2 text-3xl font-semibold tracking-normal text-zinc-950">
+            <h2 className="mt-2 text-3xl font-semibold tracking-normal text-white">
               {fraudCase.severity} Risk - {fraudCase.fraud_score}/100
             </h2>
-            <p className="mt-2 text-base font-medium text-zinc-600">
+            <p className="mt-2 text-base font-medium text-gray-400">
               Pattern: {patternTitle}
             </p>
           </div>
@@ -1570,23 +1570,23 @@ function TransactionReviewCard({
           ))}
         </div>
 
-        <div className="mt-5 grid gap-4 rounded-xl bg-zinc-50 p-4 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="mt-5 grid gap-4 rounded-xl bg-[#101018] p-4 sm:grid-cols-2 xl:grid-cols-4">
           <Fact label="Transaction ID" value={fraudCase.transaction_id} />
           <Fact label="Amount" value={money.format(fraudCase.amount)} strong />
           <Fact label="Merchant" value={fraudCase.merchant_name} />
           <Fact label="Card ID" value={fraudCase.card_id} />
         </div>
 
-        <div className="mt-5 rounded-xl border border-amber-200 bg-amber-50 p-4">
-          <div className="flex items-center gap-2 text-sm font-semibold text-amber-900">
+        <div className="mt-5 rounded-xl border border-amber-500/30 bg-amber-500/10 p-4">
+          <div className="flex items-center gap-2 text-sm font-semibold text-amber-400">
             <AlertTriangle className="h-4 w-4" />
             Why flagged
           </div>
           <ReasonList reasons={fraudCase.reasons.slice(0, 3)} />
         </div>
 
-        <details className="mt-4 rounded-xl border border-zinc-200 bg-white p-4">
-          <summary className="cursor-pointer text-sm font-semibold text-zinc-800">
+        <details className="mt-4 rounded-xl border border-white/[0.08] bg-[#0A0A0C] p-4">
+          <summary className="cursor-pointer text-sm font-semibold text-gray-200">
             Transaction details
           </summary>
           <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
@@ -1631,10 +1631,10 @@ function TransactionReviewCard({
           />
         </div>
 
-        <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-zinc-200 pt-4">
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-white/[0.08] pt-4">
           <div className="flex flex-wrap gap-2">
             <button
-              className="inline-flex min-h-10 items-center gap-2 rounded-md border border-zinc-200 bg-white px-4 text-sm font-semibold text-zinc-800 shadow-sm hover:bg-zinc-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-950"
+              className="inline-flex min-h-10 items-center gap-2 rounded-md border border-white/10 bg-white/5 px-4 text-sm font-semibold text-gray-200 shadow-sm hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500"
               onClick={onPrevious}
               type="button"
             >
@@ -1642,7 +1642,7 @@ function TransactionReviewCard({
               Previous
             </button>
             <button
-              className="inline-flex min-h-10 items-center gap-2 rounded-md border border-zinc-200 bg-white px-4 text-sm font-semibold text-zinc-800 shadow-sm hover:bg-zinc-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-950"
+              className="inline-flex min-h-10 items-center gap-2 rounded-md border border-white/10 bg-white/5 px-4 text-sm font-semibold text-gray-200 shadow-sm hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500"
               onClick={onNext}
               type="button"
             >
@@ -1651,7 +1651,7 @@ function TransactionReviewCard({
             </button>
           </div>
           <button
-            className="inline-flex min-h-10 items-center gap-2 rounded-md border border-zinc-200 bg-white px-4 text-sm font-semibold text-zinc-800 shadow-sm hover:bg-zinc-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-950 disabled:cursor-not-allowed disabled:text-zinc-400"
+            className="inline-flex min-h-10 items-center gap-2 rounded-md border border-white/10 bg-white/5 px-4 text-sm font-semibold text-gray-200 shadow-sm hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500 disabled:cursor-not-allowed disabled:text-gray-600"
             disabled={!lastAction}
             onClick={onUndo}
             type="button"
@@ -1677,15 +1677,15 @@ function EvidencePanel({
   const tabs: DetailTab[] = ["Baseline", "Related", "Timeline", "AI Summary"];
 
   return (
-    <section className="rounded-lg border border-zinc-200 bg-white shadow-sm">
-      <div className="border-b border-zinc-200 p-3">
+    <section className="rounded-lg border border-white/[0.08] bg-[#0A0A0C] shadow-sm">
+      <div className="border-b border-white/[0.08] p-3">
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 xl:grid-cols-2">
           {tabs.map((tab) => (
             <button
-              className={`min-h-10 rounded-md px-3 text-sm font-semibold transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-950 ${
+              className={`min-h-10 rounded-md px-3 text-sm font-semibold transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500 ${
                 activeTab === tab
-                  ? "bg-zinc-950 text-white"
-                  : "bg-zinc-50 text-zinc-700 hover:bg-zinc-100"
+                  ? "bg-indigo-600 text-white"
+                  : "bg-white/5 text-gray-400 hover:bg-white/10"
               }`}
               key={tab}
               onClick={() => onTabChange(tab)}
@@ -1767,20 +1767,20 @@ function BaselineSnapshot({ fraudCase }: { fraudCase: FraudCase }) {
         title="Baseline comparison"
         subtitle="Normal behavior for this card versus the current transaction."
       />
-      <div className="mt-4 overflow-hidden rounded-lg border border-zinc-200">
-        <div className="grid grid-cols-[1fr_1fr_94px] bg-zinc-50 px-3 py-2 text-xs font-semibold uppercase tracking-normal text-zinc-500">
+      <div className="mt-4 overflow-hidden rounded-lg border border-white/[0.08]">
+        <div className="grid grid-cols-[1fr_1fr_94px] bg-[#101018] px-3 py-2 text-xs font-semibold uppercase tracking-normal text-gray-500">
           <span>Normal for this card</span>
           <span>This transaction</span>
           <span>Signal</span>
         </div>
         {rows.map((row) => (
           <div
-            className="grid grid-cols-[1fr_1fr_94px] gap-2 border-t border-zinc-200 px-3 py-3 text-sm"
+            className="grid grid-cols-[1fr_1fr_94px] gap-2 border-t border-white/[0.08] px-3 py-3 text-sm"
             key={`${row.normal}-${row.current}`}
           >
-            <span className="text-zinc-600">{row.normal}</span>
-            <span className="font-medium text-zinc-900">{row.current}</span>
-            <span className="rounded-full border border-zinc-200 bg-white px-2 py-1 text-center text-xs font-semibold text-zinc-700">
+            <span className="text-gray-400">{row.normal}</span>
+            <span className="font-medium text-gray-200">{row.current}</span>
+            <span className="rounded-full border border-white/10 bg-white/5 px-2 py-1 text-center text-xs font-semibold text-gray-400">
               {row.badge}
             </span>
           </div>
@@ -1809,28 +1809,28 @@ function RelatedActivityPanel({ fraudCase }: { fraudCase: FraudCase }) {
       <div className="mt-4 space-y-4">
         {Object.entries(grouped).map(([group, items]) => (
           <section key={group}>
-            <h3 className="text-sm font-semibold text-zinc-950">{group}</h3>
+            <h3 className="text-sm font-semibold text-white">{group}</h3>
             <div className="mt-2 space-y-2">
               {items.map((item) => (
                 <div
-                  className="rounded-lg border border-zinc-200 bg-zinc-50 p-3"
+                  className="rounded-lg border border-white/[0.08] bg-[#101018] p-3"
                   key={item.transaction_id}
                 >
                   <div className="flex flex-wrap items-center justify-between gap-2">
-                    <span className="text-sm font-semibold text-zinc-950">
+                    <span className="text-sm font-semibold text-white">
                       {item.transaction_id}
                     </span>
-                    <span className="text-sm font-semibold text-zinc-800">
+                    <span className="text-sm font-semibold text-gray-200">
                       {money.format(item.amount)}
                     </span>
                   </div>
-                  <p className="mt-1 text-sm text-zinc-700">
+                  <p className="mt-1 text-sm text-gray-400">
                     {item.merchant_name} - {formatShortDate(item.timestamp)}
                   </p>
-                  <p className="mt-2 text-xs font-medium text-zinc-500">
+                  <p className="mt-2 text-xs font-medium text-gray-500">
                     {item.card_id}
                   </p>
-                  <p className="mt-2 text-sm leading-5 text-zinc-600">
+                  <p className="mt-2 text-sm leading-5 text-gray-400">
                     Related because: {item.reason}
                   </p>
                 </div>
@@ -1857,26 +1857,26 @@ function FraudTimeline({ fraudCase }: { fraudCase: FraudCase }) {
             <span
               className={`absolute left-0 top-1 flex h-4 w-4 items-center justify-center rounded-full border ${
                 event.type === "normal"
-                  ? "border-emerald-300 bg-emerald-50"
+                  ? "border-emerald-500/50 bg-emerald-500/10"
                   : event.type === "critical"
-                    ? "border-red-300 bg-red-50"
+                    ? "border-red-500/50 bg-red-500/10"
                     : event.type === "review"
-                      ? "border-sky-300 bg-sky-50"
-                      : "border-amber-300 bg-amber-50"
+                      ? "border-sky-500/50 bg-sky-500/10"
+                      : "border-amber-500/50 bg-amber-500/10"
               }`}
             >
-              <span className="h-1.5 w-1.5 rounded-full bg-current text-zinc-700" />
+              <span className="h-1.5 w-1.5 rounded-full bg-current text-gray-400" />
             </span>
-            <div className="rounded-lg border border-zinc-200 bg-zinc-50 p-3">
+            <div className="rounded-lg border border-white/[0.08] bg-[#101018] p-3">
               <div className="flex flex-wrap items-center gap-2">
-                <span className="font-mono text-sm font-semibold text-zinc-900">
+                <span className="font-mono text-sm font-semibold text-gray-200">
                   {event.time}
                 </span>
-                <span className="text-sm font-semibold text-zinc-950">
+                <span className="text-sm font-semibold text-white">
                   {event.label}
                 </span>
               </div>
-              <p className="mt-1 text-sm leading-5 text-zinc-600">
+              <p className="mt-1 text-sm leading-5 text-gray-400">
                 {event.description}
               </p>
             </div>
@@ -1913,18 +1913,18 @@ function AISummaryPanel({ fraudCase }: { fraudCase: FraudCase }) {
         title="AI-generated reviewer summary"
         subtitle="Generated from deterministic fraud signals. Fraud score unchanged."
       />
-      <div className="mt-4 rounded-lg border border-zinc-200 bg-zinc-50 p-4">
+      <div className="mt-4 rounded-lg border border-white/[0.08] bg-[#101018] p-4">
         {generated ? (
-          <p className="text-sm leading-6 text-zinc-700">{summary}</p>
+          <p className="text-sm leading-6 text-gray-300">{summary}</p>
         ) : (
-          <p className="text-sm leading-6 text-zinc-600">
+          <p className="text-sm leading-6 text-gray-400">
             Generate a concise case narrative from the visible fraud signals.
           </p>
         )}
       </div>
       <div className="mt-4 flex flex-wrap gap-2">
         <button
-          className="inline-flex min-h-10 items-center gap-2 rounded-md bg-zinc-950 px-4 text-sm font-semibold text-white shadow-sm hover:bg-zinc-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-950"
+          className="inline-flex min-h-10 items-center gap-2 rounded-md bg-indigo-600 px-4 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500"
           onClick={() => setGeneratedCaseId(fraudCase.transaction_id)}
           type="button"
         >
@@ -1932,7 +1932,7 @@ function AISummaryPanel({ fraudCase }: { fraudCase: FraudCase }) {
           Generate Summary
         </button>
         <button
-          className="inline-flex min-h-10 items-center gap-2 rounded-md border border-zinc-200 bg-white px-4 text-sm font-semibold text-zinc-800 shadow-sm hover:bg-zinc-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-950"
+          className="inline-flex min-h-10 items-center gap-2 rounded-md border border-white/10 bg-white/5 px-4 text-sm font-semibold text-gray-200 shadow-sm hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500"
           onClick={handleCopy}
           type="button"
         >
@@ -2012,7 +2012,7 @@ function SearchFilters({
         <div className="relative min-w-48 flex-1">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
           <input
-            className="min-h-9 w-full rounded-md border border-zinc-200 bg-white py-2 pl-9 pr-3 text-sm text-zinc-900 outline-none placeholder:text-zinc-400 focus:border-zinc-950 focus:ring-2 focus:ring-zinc-950/10"
+            className="min-h-9 w-full rounded-md border border-white/10 bg-[#0A0A0C] py-2 pl-9 pr-3 text-sm text-white outline-none placeholder:text-gray-500 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10"
             onChange={(event) => onSearch(event.target.value)}
             placeholder="Search transactions..."
             ref={searchInputRef}
@@ -2023,7 +2023,7 @@ function SearchFilters({
 
         <select
           aria-label="Filter by severity"
-          className="min-h-9 cursor-pointer rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-700 outline-none focus:border-zinc-950 focus:ring-2 focus:ring-zinc-950/10"
+          className="min-h-9 cursor-pointer rounded-md border border-white/10 bg-[#0A0A0C] px-3 py-2 text-sm text-gray-300 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10"
           onChange={(event) =>
             updateFilter("severity", event.target.value as FiltersState["severity"])
           }
@@ -2038,7 +2038,7 @@ function SearchFilters({
 
         <select
           aria-label="Filter by status"
-          className="min-h-9 cursor-pointer rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-700 outline-none focus:border-zinc-950 focus:ring-2 focus:ring-zinc-950/10"
+          className="min-h-9 cursor-pointer rounded-md border border-white/10 bg-[#0A0A0C] px-3 py-2 text-sm text-gray-300 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10"
           onChange={(event) =>
             updateFilter("status", event.target.value as FiltersState["status"])
           }
@@ -2055,10 +2055,10 @@ function SearchFilters({
 
         <button
           aria-expanded={filtersOpen}
-          className={`inline-flex min-h-9 cursor-pointer items-center gap-1.5 rounded-md border px-3 text-sm font-medium transition-colors duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-950 ${
+          className={`inline-flex min-h-9 cursor-pointer items-center gap-1.5 rounded-md border px-3 text-sm font-medium transition-colors duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500 ${
             filtersOpen || advancedActiveCount > 0
-              ? "border-zinc-900 bg-zinc-950 text-white"
-              : "border-zinc-200 bg-white text-zinc-700 hover:bg-zinc-50"
+              ? "border-indigo-500/50 bg-indigo-600 text-white"
+              : "border-white/10 bg-white/5 text-gray-300 hover:bg-white/10"
           }`}
           onClick={() => setFiltersOpen((open) => !open)}
           ref={filterButtonRef}
@@ -2085,7 +2085,7 @@ function SearchFilters({
 
         {hasAnyActive && (
           <button
-            className="inline-flex min-h-9 cursor-pointer items-center gap-1.5 rounded-md border border-zinc-200 bg-white px-3 text-sm font-medium text-zinc-600 hover:bg-zinc-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-950"
+            className="inline-flex min-h-9 cursor-pointer items-center gap-1.5 rounded-md border border-white/10 bg-white/5 px-3 text-sm font-medium text-gray-400 hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500"
             onClick={onClearFilters}
             type="button"
           >
@@ -2102,7 +2102,7 @@ function SearchFilters({
         }`}
       >
         <div className="overflow-hidden">
-          <div className="mt-3 grid gap-3 rounded-lg border border-zinc-200 bg-zinc-50/80 p-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="mt-3 grid gap-3 rounded-lg border border-white/[0.08] bg-[#101018]/80 p-4 sm:grid-cols-2 lg:grid-cols-3">
             <SelectControl
               label="Pattern"
               value={filters.pattern}
@@ -2128,7 +2128,7 @@ function SearchFilters({
             />
             <div className="flex justify-end sm:col-span-2 lg:col-span-3">
               <button
-                className="inline-flex min-h-9 cursor-pointer items-center gap-2 rounded-md border border-zinc-200 bg-white px-4 text-sm font-medium text-zinc-700 hover:bg-zinc-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-950"
+                className="inline-flex min-h-9 cursor-pointer items-center gap-2 rounded-md border border-white/10 bg-white/5 px-4 text-sm font-medium text-gray-300 hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500"
                 onClick={() =>
                   setFilters((current) => ({
                     ...current,
@@ -2164,17 +2164,17 @@ function SensitivityControl({
   totalTransactions: number;
 }) {
   return (
-    <section className="rounded-lg border border-zinc-200 bg-white p-4 shadow-sm">
+    <section className="rounded-lg border border-white/[0.08] bg-[#0A0A0C] p-4 shadow-sm">
       <div className="flex items-center justify-between gap-3">
         <div>
-          <h2 className="text-base font-semibold text-zinc-950">
+          <h2 className="text-base font-semibold text-white">
             Sensitivity
           </h2>
-          <p className="mt-1 text-sm text-zinc-500">
+          <p className="mt-1 text-sm text-gray-500">
             {sensitivityProfiles[sensitivity].precision}
           </p>
         </div>
-        <SlidersHorizontal className="h-5 w-5 text-zinc-500" />
+        <SlidersHorizontal className="h-5 w-5 text-gray-500" />
       </div>
       <div
         className={`mt-4 grid gap-2 ${compact ? "grid-cols-1" : "sm:grid-cols-3"}`}
@@ -2182,10 +2182,10 @@ function SensitivityControl({
         {(["Conservative", "Balanced", "Aggressive"] as SensitivityMode[]).map(
           (mode) => (
             <button
-              className={`min-h-10 rounded-md px-3 text-sm font-semibold transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-950 ${
+              className={`min-h-10 rounded-md px-3 text-sm font-semibold transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500 ${
                 sensitivity === mode
-                  ? "bg-zinc-950 text-white"
-                  : "border border-zinc-200 bg-white text-zinc-700 hover:bg-zinc-50"
+                  ? "bg-indigo-600 text-white"
+                  : "border border-white/10 bg-white/5 text-gray-300 hover:bg-white/10"
               }`}
               key={mode}
               onClick={() => onChange(mode)}
@@ -2196,7 +2196,7 @@ function SensitivityControl({
           ),
         )}
       </div>
-      <p className="mt-4 rounded-lg border border-zinc-200 bg-zinc-50 p-3 text-sm leading-6 text-zinc-600">
+      <p className="mt-4 rounded-lg border border-white/[0.08] bg-[#101018] p-3 text-sm leading-6 text-gray-400">
         {getSensitivitySummary(sensitivity, flaggedCount, totalTransactions)}
       </p>
     </section>
@@ -2220,7 +2220,7 @@ function AuditLog({
         action={
           <div className="flex flex-wrap gap-2">
             <button
-              className="inline-flex min-h-10 items-center gap-2 rounded-md border border-zinc-200 bg-white px-4 text-sm font-semibold text-zinc-800 shadow-sm hover:bg-zinc-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-950"
+              className="inline-flex min-h-10 items-center gap-2 rounded-md border border-white/10 bg-white/5 px-4 text-sm font-semibold text-gray-200 shadow-sm hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500"
               onClick={onGoDashboard}
               type="button"
             >
@@ -2228,7 +2228,7 @@ function AuditLog({
               Dashboard
             </button>
             <button
-              className="inline-flex min-h-10 items-center gap-2 rounded-md bg-zinc-950 px-4 text-sm font-semibold text-white shadow-sm hover:bg-zinc-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-950"
+              className="inline-flex min-h-10 items-center gap-2 rounded-md bg-indigo-600 px-4 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500"
               onClick={onBackToReview}
               type="button"
             >
@@ -2241,19 +2241,19 @@ function AuditLog({
         mode="Audit log"
       />
 
-      <section className="mt-6 rounded-lg border border-zinc-200 bg-white p-5 shadow-sm">
+      <section className="mt-6 rounded-lg border border-white/[0.08] bg-[#0A0A0C] p-5 shadow-sm">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h1 className="text-3xl font-semibold tracking-normal text-zinc-950">
+            <h1 className="text-3xl font-semibold tracking-normal text-white">
               Reviewer decisions
             </h1>
-            <p className="mt-2 text-sm leading-6 text-zinc-600">
+            <p className="mt-2 text-sm leading-6 text-gray-400">
               Decisions include the previous status, new status, score,
               severity, and reasons visible at action time.
             </p>
           </div>
           <button
-            className="inline-flex min-h-11 items-center gap-2 rounded-md border border-zinc-200 bg-white px-4 text-sm font-semibold text-zinc-800 shadow-sm hover:bg-zinc-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-950"
+            className="inline-flex min-h-11 items-center gap-2 rounded-md border border-white/10 bg-white/5 px-4 text-sm font-semibold text-gray-200 shadow-sm hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500"
             onClick={onExport}
             type="button"
           >
@@ -2276,17 +2276,17 @@ function AuditLog({
           <div className="mt-5 space-y-3">
             {entries.map((entry) => (
               <article
-                className="rounded-lg border border-zinc-200 bg-zinc-50 p-4"
+                className="rounded-lg border border-white/[0.08] bg-[#101018] p-4"
                 key={entry.id}
               >
                 <div className="grid gap-3 md:grid-cols-[90px_130px_1fr_170px_120px] md:items-start">
                   <Fact label="Time" value={entry.time} />
                   <Fact label="Transaction ID" value={entry.transactionId} />
                   <div>
-                    <div className="text-xs font-semibold uppercase tracking-normal text-zinc-500">
+                    <div className="text-xs font-semibold uppercase tracking-normal text-gray-500">
                       Action
                     </div>
-                    <div className="mt-1 font-semibold text-zinc-950">
+                    <div className="mt-1 font-semibold text-white">
                       {entry.action}
                     </div>
                     <div className="mt-2 flex flex-wrap gap-2">
@@ -2308,7 +2308,7 @@ function AuditLog({
                     strong
                   />
                   <div>
-                    <div className="text-xs font-semibold uppercase tracking-normal text-zinc-500">
+                    <div className="text-xs font-semibold uppercase tracking-normal text-gray-500">
                       Severity
                     </div>
                     <div className="mt-1">
@@ -2341,19 +2341,19 @@ function CompletionState({
 }) {
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-4xl items-center px-5 py-8">
-      <section className="w-full rounded-lg border border-zinc-200 bg-white p-8 text-center shadow-sm">
-        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-emerald-50 text-emerald-700">
+      <section className="w-full rounded-lg border border-white/[0.08] bg-[#0A0A0C] p-8 text-center shadow-sm">
+        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-400">
           <CheckCircle2 className="h-8 w-8" />
         </div>
-        <h1 className="mt-5 text-4xl font-semibold tracking-normal text-zinc-950">
+        <h1 className="mt-5 text-4xl font-semibold tracking-normal text-white">
           Review complete.
         </h1>
-        <p className="mx-auto mt-3 max-w-2xl text-base leading-7 text-zinc-600">
+        <p className="mx-auto mt-3 max-w-2xl text-base leading-7 text-gray-400">
           Export your updated CSV or inspect the audit log.
         </p>
         <div className="mt-6 grid gap-3 sm:grid-cols-4">
           <button
-            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-md bg-zinc-950 px-4 text-sm font-semibold text-white shadow-sm hover:bg-zinc-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-950"
+            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-md bg-indigo-600 px-4 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500"
             onClick={onExport}
             type="button"
           >
@@ -2361,7 +2361,7 @@ function CompletionState({
             Export CSV
           </button>
           <button
-            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-md border border-zinc-200 bg-white px-4 text-sm font-semibold text-zinc-800 shadow-sm hover:bg-zinc-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-950"
+            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-md border border-white/10 bg-white/5 px-4 text-sm font-semibold text-gray-200 shadow-sm hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500"
             onClick={onGoAudit}
             type="button"
           >
@@ -2369,7 +2369,7 @@ function CompletionState({
             Audit Log
           </button>
           <button
-            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-md border border-zinc-200 bg-white px-4 text-sm font-semibold text-zinc-800 shadow-sm hover:bg-zinc-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-950"
+            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-md border border-white/10 bg-white/5 px-4 text-sm font-semibold text-gray-200 shadow-sm hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500"
             onClick={onReviewAgain}
             type="button"
           >
@@ -2377,7 +2377,7 @@ function CompletionState({
             Review Queue
           </button>
           <button
-            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-md border border-zinc-200 bg-white px-4 text-sm font-semibold text-zinc-800 shadow-sm hover:bg-zinc-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-950"
+            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-md border border-white/10 bg-white/5 px-4 text-sm font-semibold text-gray-200 shadow-sm hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500"
             onClick={onUndo}
             type="button"
           >
@@ -2385,7 +2385,7 @@ function CompletionState({
             Undo
           </button>
         </div>
-        <p className="mt-5 text-sm font-medium text-zinc-500">
+        <p className="mt-5 text-sm font-medium text-gray-500">
           {auditEntries.length} audit decision
           {auditEntries.length === 1 ? "" : "s"} recorded.
         </p>
@@ -2407,16 +2407,16 @@ function KeyboardShortcutHelp() {
 
   return (
     <section className="flex flex-wrap items-center gap-2">
-      <span className="text-sm font-semibold text-zinc-800">Shortcuts</span>
+      <span className="text-sm font-semibold text-gray-300">Shortcuts</span>
         {shortcuts.map(([key, label]) => (
           <div
-            className="flex items-center gap-2 rounded-full border border-zinc-200 bg-zinc-50 px-2.5 py-1 text-xs"
+            className="flex items-center gap-2 rounded-full border border-white/[0.08] bg-white/5 px-2.5 py-1 text-xs"
             key={`${key}-${label}`}
           >
-            <kbd className="font-mono font-semibold text-zinc-800">
+            <kbd className="font-mono font-semibold text-gray-200">
               {key}
             </kbd>
-            <span className="text-zinc-500">{label}</span>
+            <span className="text-gray-500">{label}</span>
           </div>
         ))}
     </section>
@@ -2439,17 +2439,17 @@ function DistributionPanel({
 
   return (
     <section className="flex flex-col">
-      <h2 className="text-sm font-semibold text-zinc-950">{title}</h2>
+      <h2 className="text-sm font-semibold text-white">{title}</h2>
       <div className="mt-4 space-y-3">
         {rows.map(([label, value]) => (
           <div key={label}>
             <div className="mb-1 flex items-center justify-between gap-3 text-sm">
-              <span className="font-medium text-zinc-700">{label}</span>
-              <span className="font-semibold text-zinc-950">{value}</span>
+              <span className="font-medium text-gray-400">{label}</span>
+              <span className="font-semibold text-white">{value}</span>
             </div>
-            <div className="h-2 overflow-hidden rounded-full bg-zinc-100">
+            <div className="h-2 overflow-hidden rounded-full bg-white/10">
               <div
-                className="h-full rounded-full bg-emerald-600"
+                className="h-full rounded-full bg-emerald-500"
                 style={{ width: `${(value / max) * 100}%` }}
               />
             </div>
@@ -2471,11 +2471,11 @@ function MetricCard({
 }) {
   return (
     <div className="flex flex-col">
-      <div className="flex items-center gap-2 text-zinc-500">
+      <div className="flex items-center gap-2 text-gray-500">
         <Icon className="h-4 w-4" />
         <span className="text-sm font-medium">{label}</span>
       </div>
-      <div className="mt-2 text-3xl font-medium tracking-tight text-zinc-950">{value}</div>
+      <div className="mt-2 text-3xl font-medium tracking-tight text-white">{value}</div>
     </div>
   );
 }
@@ -2495,10 +2495,10 @@ function ReviewActionButton({
 }) {
   const toneClass =
     tone === "approve"
-      ? "border-emerald-200 bg-emerald-50 text-emerald-900 hover:bg-emerald-100"
+      ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/20"
       : tone === "escalate"
-        ? "border-red-200 bg-red-50 text-red-900 hover:bg-red-100"
-        : "border-zinc-200 bg-zinc-50 text-zinc-900 hover:bg-zinc-100";
+        ? "border-red-500/30 bg-red-500/10 text-red-300 hover:bg-red-500/20"
+        : "border-white/10 bg-white/5 text-gray-200 hover:bg-white/10";
 
   return (
     <button
@@ -2513,7 +2513,7 @@ function ReviewActionButton({
           <span className="mt-0.5 block text-xs opacity-80">Shortcut {shortcut}</span>
         </span>
       </span>
-      <kbd className="rounded-md border border-current/20 bg-white/70 px-2 py-1 font-mono text-xs font-semibold">
+      <kbd className="rounded-md border border-current/20 bg-black/40 px-2 py-1 font-mono text-xs font-semibold">
         {shortcut}
       </kbd>
     </button>
@@ -2522,10 +2522,10 @@ function ReviewActionButton({
 
 function SeverityBadge({ severity }: { severity: Severity }) {
   const className: Record<Severity, string> = {
-    Low: "border-emerald-200 bg-emerald-50 text-emerald-800",
-    Medium: "border-amber-200 bg-amber-50 text-amber-900",
-    High: "border-orange-200 bg-orange-50 text-orange-900",
-    Critical: "border-red-200 bg-red-50 text-red-800",
+    Low: "border-emerald-500/30 bg-emerald-500/10 text-emerald-400",
+    Medium: "border-amber-500/30 bg-amber-500/10 text-amber-400",
+    High: "border-orange-500/30 bg-orange-500/10 text-orange-400",
+    Critical: "border-red-500/30 bg-red-500/10 text-red-400",
   };
 
   return (
@@ -2539,7 +2539,7 @@ function SeverityBadge({ severity }: { severity: Severity }) {
 
 function PatternBadge({ pattern }: { pattern: string }) {
   return (
-    <span className="inline-flex items-center rounded-full border border-zinc-200 bg-zinc-50 px-3 py-1 text-xs font-semibold text-zinc-700">
+    <span className="inline-flex items-center rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-semibold text-gray-400">
       {formatPattern(pattern)}
     </span>
   );
@@ -2556,7 +2556,7 @@ function ReasonList({
     <ol className={`list-decimal space-y-2 pl-5 ${compact ? "mt-3" : "mt-3"}`}>
       {reasons.map((reason) => (
         <li
-          className={`${compact ? "text-sm" : "text-base"} leading-6 text-zinc-700`}
+          className={`${compact ? "text-sm" : "text-base"} leading-6 text-gray-400`}
           key={reason}
         >
           {reason}
@@ -2577,11 +2577,11 @@ function Fact({
 }) {
   return (
     <div>
-      <div className="text-xs font-semibold uppercase tracking-normal text-zinc-500">
+      <div className="text-xs font-semibold uppercase tracking-normal text-gray-500">
         {label}
       </div>
       <div
-        className={`mt-1 break-words ${strong ? "text-lg font-semibold text-zinc-950" : "text-sm font-medium text-zinc-800"}`}
+        className={`mt-1 break-words ${strong ? "text-lg font-semibold text-white" : "text-sm font-medium text-gray-300"}`}
       >
         {value}
       </div>
@@ -2603,10 +2603,10 @@ function SelectControl({
   value: string;
 }) {
   return (
-    <label className="block text-sm font-semibold text-zinc-700">
+    <label className="block text-sm font-semibold text-gray-400">
       {label}
       <select
-        className="mt-2 min-h-11 w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 shadow-sm outline-none focus:border-zinc-950 focus:ring-2 focus:ring-zinc-950/10"
+        className="mt-2 min-h-11 w-full rounded-md border border-white/10 bg-[#0A0A0C] px-3 py-2 text-sm text-white shadow-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10"
         onChange={(event) => onChange(event.target.value)}
         value={value}
       >
@@ -2623,7 +2623,7 @@ function SelectControl({
 function ExportButton({ onExport }: { onExport: () => void }) {
   return (
     <button
-      className="inline-flex min-h-10 items-center gap-2 rounded-md border border-zinc-200 bg-white px-4 text-sm font-semibold text-zinc-800 shadow-sm hover:bg-zinc-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-950"
+      className="inline-flex min-h-10 items-center gap-2 rounded-md border border-white/10 bg-white/5 px-4 text-sm font-semibold text-gray-200 shadow-sm hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500"
       onClick={onExport}
       type="button"
     >
@@ -2647,17 +2647,17 @@ function EmptyState({
   title: string;
 }) {
   return (
-    <section className="rounded-lg border border-dashed border-zinc-300 bg-white p-8 text-center shadow-sm">
-      <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-zinc-100 text-zinc-600">
+    <section className="rounded-lg border border-dashed border-white/[0.08] bg-[#0A0A0C] p-8 text-center shadow-sm">
+      <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-white/10 text-gray-400">
         <Icon className="h-6 w-6" />
       </div>
-      <h2 className="mt-4 text-xl font-semibold text-zinc-950">{title}</h2>
-      <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-zinc-600">
+      <h2 className="mt-4 text-xl font-semibold text-white">{title}</h2>
+      <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-gray-400">
         {description}
       </p>
       {actionLabel && onAction && (
         <button
-          className="mt-5 inline-flex min-h-10 items-center justify-center rounded-md bg-zinc-950 px-4 text-sm font-semibold text-white shadow-sm hover:bg-zinc-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-950"
+          className="mt-5 inline-flex min-h-10 items-center justify-center rounded-md bg-indigo-600 px-4 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500"
           onClick={onAction}
           type="button"
         >
@@ -2678,8 +2678,8 @@ function LoadingState({
   title: string;
 }) {
   return (
-    <section className="mt-5 rounded-lg border border-zinc-200 bg-zinc-50 p-4">
-      <div className="flex items-center gap-2 text-sm font-semibold text-zinc-950">
+    <section className="mt-5 rounded-lg border border-white/[0.08] bg-[#101018] p-4">
+      <div className="flex items-center gap-2 text-sm font-semibold text-white">
         <Loader2 className="h-4 w-4 animate-spin" />
         {title}
       </div>
@@ -2691,17 +2691,17 @@ function LoadingState({
           >
             <span
               className={
-                index <= currentStep ? "font-semibold text-zinc-900" : "text-zinc-500"
+                index <= currentStep ? "font-semibold text-gray-200" : "text-gray-500"
               }
             >
               {step}
             </span>
             {index < currentStep ? (
-              <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+              <CheckCircle2 className="h-4 w-4 text-emerald-400" />
             ) : index === currentStep ? (
-              <Loader2 className="h-4 w-4 animate-spin text-zinc-600" />
+              <Loader2 className="h-4 w-4 animate-spin text-gray-400" />
             ) : (
-              <span className="h-4 w-4 rounded-full border border-zinc-300" />
+              <span className="h-4 w-4 rounded-full border border-white/20" />
             )}
           </div>
         ))}
@@ -2712,10 +2712,10 @@ function LoadingState({
 
 function Toast({ messages }: { messages: ToastMessage[] }) {
   const toneClass: Record<ToastTone, string> = {
-    success: "border-emerald-200 bg-emerald-50 text-emerald-900",
-    info: "border-sky-200 bg-sky-50 text-sky-900",
-    warning: "border-amber-200 bg-amber-50 text-amber-950",
-    error: "border-red-200 bg-red-50 text-red-900",
+    success: "border-emerald-500/30 bg-[#0A0A0C] text-emerald-300",
+    info: "border-sky-500/30 bg-[#0A0A0C] text-sky-300",
+    warning: "border-amber-500/30 bg-[#0A0A0C] text-amber-300",
+    error: "border-red-500/30 bg-[#0A0A0C] text-red-300",
   };
 
   return (
@@ -2745,10 +2745,10 @@ function AppHeader({
   mode: string;
 }) {
   return (
-    <header className="flex flex-col gap-4 border-b border-zinc-200 pb-4 lg:flex-row lg:items-center lg:justify-between">
+    <header className="flex flex-col gap-4 border-b border-white/[0.08] pb-4 lg:flex-row lg:items-center lg:justify-between">
       <div className="flex flex-wrap items-center gap-3">
         {!hideBrand && <BrandMark />}
-        <span className="rounded-full border border-zinc-200 bg-white px-3 py-1 text-sm font-semibold text-zinc-600 shadow-sm">
+        <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-sm font-semibold text-gray-400 shadow-sm">
           {mode}
         </span>
       </div>
@@ -2760,7 +2760,7 @@ function AppHeader({
 function FrogIcon({ size = 40 }: { size?: number }) {
   return (
     <div
-      className="flex shrink-0 items-center justify-center rounded-full bg-white shadow-sm ring-1 ring-zinc-200 overflow-hidden"
+      className="flex shrink-0 items-center justify-center rounded-full bg-[#0A0A0C] shadow-sm ring-1 ring-white/10 overflow-hidden"
       style={{ width: size, height: size }}
     >
       {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -2778,10 +2778,10 @@ function BrandMark() {
     <div className="flex items-center gap-3">
       <FrogIcon size={40} />
       <div>
-        <div className="text-xl font-semibold tracking-normal text-zinc-950">
+        <div className="text-xl font-semibold tracking-normal text-white">
           FraudFrog
         </div>
-        <div className="text-sm font-medium text-zinc-500">
+        <div className="text-sm font-medium text-gray-500">
           Leap Ahead of Fraud
         </div>
       </div>
@@ -2807,12 +2807,12 @@ function Sidebar({
   view: View;
 }) {
   return (
-    <aside className="sticky top-0 flex h-screen w-56 shrink-0 flex-col border-r border-zinc-200 bg-white">
-      <div className="flex items-center gap-2.5 border-b border-zinc-200 px-4 py-4">
+    <aside className="sticky top-0 flex h-screen w-56 shrink-0 flex-col border-r border-white/[0.08] bg-[#050505]">
+      <div className="flex items-center gap-2.5 border-b border-white/[0.08] px-4 py-4">
         <FrogIcon size={34} />
         <div>
-          <div className="text-sm font-semibold text-zinc-950">FraudFrog</div>
-          <div className="text-xs text-zinc-500">Leap Ahead of Fraud</div>
+          <div className="text-sm font-semibold text-white">FraudFrog</div>
+          <div className="text-xs text-gray-500">Leap Ahead of Fraud</div>
         </div>
       </div>
 
@@ -2845,7 +2845,7 @@ function Sidebar({
         />
       </nav>
 
-      <div className="border-t border-zinc-200 px-3 py-3">
+      <div className="border-t border-white/[0.08] px-3 py-3">
         <NavItem
           icon={Upload}
           label="Upload New CSV"
@@ -2872,10 +2872,10 @@ function NavItem({
   return (
     <button
       aria-current={active ? "page" : undefined}
-      className={`flex w-full cursor-pointer items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-950 ${
+      className={`flex w-full cursor-pointer items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500 ${
         active
-          ? "bg-zinc-950 text-white"
-          : "text-zinc-700 hover:bg-zinc-100 hover:text-zinc-950"
+          ? "bg-indigo-600/20 text-indigo-300"
+          : "text-gray-400 hover:bg-white/5 hover:text-white"
       }`}
       onClick={onClick}
       type="button"
@@ -2885,7 +2885,7 @@ function NavItem({
       {badge != null && badge > 0 && (
         <span
           className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
-            active ? "bg-white/20 text-white" : "bg-zinc-100 text-zinc-600"
+            active ? "bg-white/20 text-white" : "bg-white/10 text-gray-400"
           }`}
         >
           {badge}
@@ -2906,12 +2906,12 @@ function PanelTitle({
 }) {
   return (
     <div className="flex items-start gap-3">
-      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-zinc-100 text-zinc-700">
+      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-white/10 text-gray-400">
         <Icon className="h-5 w-5" />
       </div>
       <div>
-        <h2 className="text-base font-semibold text-zinc-950">{title}</h2>
-        <p className="mt-1 text-sm leading-5 text-zinc-500">{subtitle}</p>
+        <h2 className="text-base font-semibold text-white">{title}</h2>
+        <p className="mt-1 text-sm leading-5 text-gray-500">{subtitle}</p>
       </div>
     </div>
   );
@@ -3084,14 +3084,14 @@ function PieChart({
   let cumAngle = -90;
 
   return (
-    <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm">
-      <h2 className="text-lg font-semibold text-zinc-950">{title}</h2>
+    <div className="rounded-xl border border-white/[0.08] bg-[#0A0A0C] p-6 shadow-sm">
+      <h2 className="text-lg font-semibold text-white">{title}</h2>
       {subtitle && (
-        <p className="mt-1 text-sm text-zinc-500">{subtitle}</p>
+        <p className="mt-1 text-sm text-gray-500">{subtitle}</p>
       )}
 
       {total === 0 ? (
-        <div className="mt-5 flex h-32 items-center justify-center rounded-lg bg-zinc-50 text-sm text-zinc-400">
+        <div className="mt-5 flex h-32 items-center justify-center rounded-lg bg-[#101018] text-sm text-gray-500">
           No data yet — upload a CSV to see this chart.
         </div>
       ) : (
@@ -3105,7 +3105,7 @@ function PieChart({
             })}
             <text
               dominantBaseline="middle"
-              fill="#09090b"
+              fill="#ffffff"
               fontSize={20}
               fontWeight={600}
               textAnchor="middle"
@@ -3116,7 +3116,7 @@ function PieChart({
             </text>
             <text
               dominantBaseline="middle"
-              fill="#71717a"
+              fill="#6b7280"
               fontSize={11}
               textAnchor="middle"
               x={cx}
@@ -3133,13 +3133,13 @@ function PieChart({
                   className="h-2.5 w-2.5 shrink-0 rounded-full"
                   style={{ backgroundColor: segment.color }}
                 />
-                <span className="flex-1 truncate text-sm text-zinc-600">
+                <span className="flex-1 truncate text-sm text-gray-400">
                   {segment.label}
                 </span>
-                <span className="text-sm font-semibold text-zinc-950">
+                <span className="text-sm font-semibold text-white">
                   {Math.round((segment.value / total) * 100)}%
                 </span>
-                <span className="w-10 text-right text-sm text-zinc-400">
+                <span className="w-10 text-right text-sm text-gray-500">
                   {segment.value.toLocaleString()}
                 </span>
               </div>
