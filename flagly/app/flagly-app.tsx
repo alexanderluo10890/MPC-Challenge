@@ -53,7 +53,7 @@ import {
 } from "./mock-data";
 import {
   buildExportCsv,
-  buildMockFraudCases,
+  buildFraudCases,
   getFlaggedCases,
   getSensitivityThreshold,
   parseTransactionsCsv,
@@ -383,12 +383,12 @@ function getSensitivitySummary(
   totalTransactions: number,
 ) {
   if (mode === "Conservative") {
-    return `Conservative mode flags ${flaggedCount} of ${totalTransactions} transactions with fewer false positives.`;
+    return `Tuned for when a wrongly-flagged customer is the costlier mistake: ${flaggedCount} of ${totalTransactions} transactions flagged, prioritizing precision over catching every case.`;
   }
   if (mode === "Aggressive") {
-    return `Aggressive mode flags ${flaggedCount} of ${totalTransactions} transactions, increasing recall but likely adding more false positives.`;
+    return `Tuned for when missed fraud is the costlier mistake: ${flaggedCount} of ${totalTransactions} transactions flagged, prioritizing recall and accepting more false positives.`;
   }
-  return `Balanced mode flags ${flaggedCount} of ${totalTransactions} transactions and keeps precision and recall even.`;
+  return `Weighs a false positive and a missed fraud evenly: ${flaggedCount} of ${totalTransactions} transactions flagged (F1-optimal on this data).`;
 }
 
 export default function FraudFrogApp() {
@@ -572,7 +572,7 @@ export default function FraudFrogApp() {
       setProcessingStep(step);
       await wait(700);
     }
-    const scoredCases = buildMockFraudCases(rowsToUse);
+    const scoredCases = buildFraudCases(rowsToUse);
     const nextSummary = getDatasetSummary(
       sourceRows,
       scoredCases,
@@ -2316,9 +2316,9 @@ function SearchFilters({
 }
 
 const sensitivityModeDescriptions: Record<SensitivityMode, string> = {
-  Conservative: "Fewer flags · higher precision",
-  Balanced: "Default review mode",
-  Aggressive: "More flags · higher recall",
+  Conservative: "False positives cost more · fewer flags",
+  Balanced: "Costs weighed evenly",
+  Aggressive: "Missed fraud costs more · more flags",
 };
 
 function SensitivityControl({
@@ -2341,10 +2341,11 @@ function SensitivityControl({
       <div className="flex items-center justify-between gap-3">
         <div>
           <h2 className="text-base font-semibold text-zinc-950">
-            Detection Sensitivity
+            Review Cost Tuning
           </h2>
           <p className="mt-1 text-sm text-zinc-500">
-            Controls how aggressively the detector flags transactions.
+            Set the cost of a false positive vs. a missed fraud — the flagged set
+            updates live.
           </p>
         </div>
         <button
@@ -2378,6 +2379,10 @@ function SensitivityControl({
             </button>
           ),
         )}
+      </div>
+      <div className="mt-2 flex items-center justify-between text-[11px] font-medium text-zinc-400">
+        <span>← Protect customers (FP costs more)</span>
+        <span>Catch fraud (misses cost more) →</span>
       </div>
       <p className="mt-4 rounded-lg border border-zinc-100 bg-zinc-50 p-3 text-sm leading-6 text-zinc-600">
         {getSensitivitySummary(sensitivity, flaggedCount, totalTransactions)}

@@ -183,7 +183,7 @@ export function parseTransactionsCsv(text: string): CsvParseResult {
 
 // ─── Fraud Case Building ──────────────────────────────────────────────────────
 
-export function buildMockFraudCases(rows: ScoredTransactionCsvRow[]): FraudCase[] {
+export function buildFraudCases(rows: ScoredTransactionCsvRow[]): FraudCase[] {
   const context = buildScoringContext(rows);
 
   // Use Python scores when at least one row has risk_score populated
