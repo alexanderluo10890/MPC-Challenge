@@ -813,7 +813,6 @@ export default function FraudFrogApp() {
             transition={transitionOut}
           >
             <UploadScreen
-              datasetSummary={datasetSummary}
               isPythonScored={isPythonScored}
               onFileSelected={handleFileSelected}
               onProcess={handleProcessTransactions}
@@ -900,7 +899,6 @@ export default function FraudFrogApp() {
                   setActiveIndex(0);
                   setFilters(nextFilters);
                 }}
-                totalTransactions={datasetSummary.totalTransactions}
               />
             )}
 
@@ -961,7 +959,6 @@ export default function FraudFrogApp() {
 }
 
 function UploadScreen({
-  datasetSummary,
   isPythonScored,
   onFileSelected,
   onProcess,
@@ -972,7 +969,6 @@ function UploadScreen({
   uploadError,
   uploadWarnings,
 }: {
-  datasetSummary: DatasetSummary;
   isPythonScored: boolean;
   onFileSelected: (file: File | null) => void;
   onProcess: () => void;
@@ -1388,7 +1384,6 @@ function ReviewQueue({
   searchTerm,
   sensitivity,
   setFilters,
-  totalTransactions,
 }: {
   activeIndex: number;
   activeTab: DetailTab;
@@ -1414,7 +1409,6 @@ function ReviewQueue({
   searchTerm: string;
   sensitivity: SensitivityMode;
   setFilters: Dispatch<SetStateAction<FiltersState>>;
-  totalTransactions: number;
 }) {
   return (
     <main className="mx-auto min-h-screen w-full max-w-[1500px] px-4 py-5 sm:px-6">
@@ -2198,11 +2192,6 @@ function SensitivityControl({
   totalTransactions: number;
 }) {
   const [showKnobs, setShowKnobs] = useState(false);
-  const [isMounted, setIsMounted] = useState(false);
-
-  useEffect(() => {
-    setIsMounted(true);
-  }, []);
 
   return (
     <section className="rounded-lg border border-zinc-200 bg-white p-4 shadow-sm">
@@ -2248,7 +2237,7 @@ function SensitivityControl({
       <p className="mt-4 rounded-lg border border-zinc-200 bg-zinc-50 p-3 text-sm leading-6 text-zinc-600">
         {getSensitivitySummary(sensitivity, flaggedCount, totalTransactions)}
       </p>
-      {isMounted && showKnobs
+      {showKnobs && typeof document !== "undefined"
         ? createPortal(
             <div
               className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-950/50 px-4 py-6 backdrop-blur-sm"
@@ -3186,7 +3175,32 @@ function PieChart({
   const cy = 80;
   const outerR = 68;
   const innerR = 40;
-  let cumAngle = -90;
+  const chartSegments =
+    total === 0
+      ? []
+      : data.reduce<{
+        endAngle: number;
+        segments: Array<{ color: string; label: string; path: string }>;
+      }>(
+        (accumulator, segment) => {
+          const angle = (segment.value / total) * 360;
+          const startAngle = accumulator.endAngle;
+          const endAngle = startAngle + angle;
+
+          return {
+            endAngle,
+            segments: [
+              ...accumulator.segments,
+              {
+                color: segment.color,
+                label: segment.label,
+                path: donutSlicePath(cx, cy, outerR, innerR, startAngle, endAngle),
+              },
+            ],
+          };
+        },
+        { endAngle: -90, segments: [] },
+      ).segments;
 
   return (
     <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm">
@@ -3197,17 +3211,14 @@ function PieChart({
 
       {total === 0 ? (
         <div className="mt-5 flex h-32 items-center justify-center rounded-lg bg-zinc-50 text-sm text-zinc-400">
-          No data yet — upload a CSV to see this chart.
+          No data yet - upload a CSV to see this chart.
         </div>
       ) : (
         <div className="mt-5 flex flex-col items-center gap-6 sm:flex-row">
           <svg className="shrink-0" height={160} viewBox="0 0 160 160" width={160}>
-            {data.map((segment) => {
-              const angle = (segment.value / total) * 360;
-              const path = donutSlicePath(cx, cy, outerR, innerR, cumAngle, cumAngle + angle);
-              cumAngle += angle;
-              return <path d={path} fill={segment.color} key={segment.label} />;
-            })}
+            {chartSegments.map((segment) => (
+              <path d={segment.path} fill={segment.color} key={segment.label} />
+            ))}
             <text
               dominantBaseline="middle"
               fill="#09090b"

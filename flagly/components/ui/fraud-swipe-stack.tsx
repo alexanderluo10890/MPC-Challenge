@@ -534,7 +534,6 @@ function DetailDrawer({
 
   const sev = severityStyles[fraudCase.severity];
   const isForeign = fraudCase.cardholder_country !== fraudCase.merchant_country;
-  const isNewDevice = Boolean(fraudCase.device_id && !fraudCase.device_id.includes("known"));
 
   // Spend bar: how wide is the "normal" portion vs the excess
   const barNormalPct = Math.min(
