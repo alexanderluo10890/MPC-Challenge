@@ -634,11 +634,18 @@ export default function FraudFrogApp() {
       return;
     }
 
-    const csv = buildExportCsv(
-      exportCases,
-      statuses,
-      getSensitivityThreshold(sensitivity),
+    const flaggedThreshold = getSensitivityThreshold(sensitivity);
+    const fraudCases = exportCases.filter(
+      (fraudCase) =>
+        fraudCase.fraud_score >= flaggedThreshold ||
+        statuses[fraudCase.transaction_id] === "escalated_fraud",
     );
+    if (fraudCases.length === 0) {
+      addToast("No fraud cases to export at the current sensitivity.", "warning");
+      return;
+    }
+
+    const csv = buildExportCsv(exportCases, statuses, flaggedThreshold);
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const baseName = (datasetSummary.fileName || "transactions.csv").replace(
@@ -647,17 +654,17 @@ export default function FraudFrogApp() {
     );
     const link = document.createElement("a");
     link.href = url;
-    link.download = `${baseName}_reviewed.csv`;
+    link.download = `${baseName}_fraud_cases.csv`;
     document.body.appendChild(link);
     link.click();
     link.remove();
     URL.revokeObjectURL(url);
 
-    const escalated = exportCases.filter(
+    const escalated = fraudCases.filter(
       (fraudCase) => statuses[fraudCase.transaction_id] === "escalated_fraud",
     ).length;
     addToast(
-      `Exported ${number.format(exportCases.length)} transactions (${escalated} marked as fraud) with scores, reasons, and review decisions.`,
+      `Exported ${number.format(fraudCases.length)} fraud case${fraudCases.length === 1 ? "" : "s"} (${escalated} marked as fraud) with scores, reasons, and review decisions.`,
       "success",
     );
   };

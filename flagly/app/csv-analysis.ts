@@ -296,12 +296,17 @@ export function buildExportCsv(
   statuses: Record<string, ReviewStatus>,
   flaggedThreshold: number,
 ): string {
-  const rows = cases.map((fraudCase) => {
+  const rows = cases.flatMap((fraudCase) => {
     const reviewStatus = statuses[fraudCase.transaction_id] ?? fraudCase.review_status;
     const flagged =
       fraudCase.fraud_score >= flaggedThreshold || reviewStatus === "escalated_fraud";
 
-    return {
+    // Export only fraud cases (flagged), not every scored transaction.
+    if (!flagged) {
+      return [];
+    }
+
+    return [{
       transaction_id: fraudCase.transaction_id,
       timestamp: fraudCase.timestamp,
       card_id: fraudCase.card_id,
@@ -320,7 +325,7 @@ export function buildExportCsv(
       review_status: reviewStatusExportLabels[reviewStatus],
       detected_patterns: fraudCase.detected_patterns.join(" | "),
       reasons: fraudCase.reasons.join(" | "),
-    };
+    }];
   });
 
   return Papa.unparse(rows, { quotes: true });
