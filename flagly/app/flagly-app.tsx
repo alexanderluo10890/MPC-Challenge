@@ -60,6 +60,7 @@ import {
   FraudSwipeStack,
   type SwipeSessionStats,
 } from "@/components/ui/fraud-swipe-stack";
+import { GridScan } from "@/components/ui/GridScan";
 
 type View = "upload" | "dashboard" | "review" | "audit" | "complete" | "swipe";
 type SensitivityMode = "Conservative" | "Balanced" | "Aggressive";
@@ -932,19 +933,35 @@ function UploadScreen({
   };
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center bg-[#f5f7f8] px-5 py-16">
+    <main className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden bg-zinc-950 px-5 py-16">
+      {/* ── GridScan animated background ────────────────────────────── */}
+      <div className="absolute inset-0 z-0">
+        <GridScan
+          sensitivity={0.55}
+          lineThickness={1}
+          linesColor="#bfb7ce"
+          gridScale={0.11}
+          scanColor="#9bff00"
+          scanOpacity={0.4}
+          enablePost
+          bloomIntensity={0.6}
+          chromaticAberration={0.002}
+          noiseIntensity={0.01}
+        />
+      </div>
+
       {/* ── HERO: centered title + description ──────────────────────── */}
-      <div className="w-full max-w-xl text-center">
-        <div className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-sm font-semibold text-emerald-800">
+      <div className="relative z-10 w-full max-w-xl text-center">
+        <div className="inline-flex items-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-sm font-semibold text-emerald-400">
           <ShieldCheck className="h-4 w-4" />
           The reviewer keeps the final say
         </div>
 
-        <h1 className="mt-5 text-6xl font-bold tracking-tight text-zinc-950 sm:text-7xl">
+        <h1 className="mt-5 text-6xl font-bold tracking-tight text-white sm:text-7xl">
           Flagly
         </h1>
 
-        <p className="mt-5 text-lg leading-7 text-zinc-600">
+        <p className="mt-5 text-lg leading-7 text-zinc-400">
           Upload a transactions CSV to detect suspicious cases. Flagly scores
           each transaction and presents flagged cases one by one for your team
           to approve, escalate, or defer.
@@ -952,14 +969,14 @@ function UploadScreen({
       </div>
 
       {/* ── UPLOAD ZONE ─────────────────────────────────────────────── */}
-      <div className="mt-10 w-full max-w-xl">
+      <div className="relative z-10 mt-10 w-full max-w-xl">
         <div
-          className="rounded-2xl border-2 border-dashed border-zinc-300 bg-white p-10 text-center transition-colors duration-200 hover:border-zinc-400"
+          className="rounded-2xl border-2 border-dashed border-zinc-700 bg-zinc-900/70 p-10 text-center backdrop-blur-sm transition-colors duration-200 hover:border-zinc-500"
           onDragOver={(event) => event.preventDefault()}
           onDrop={handleDrop}
         >
-          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-zinc-100">
-            <Upload className="h-8 w-8 text-zinc-500" />
+          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-zinc-800">
+            <Upload className="h-8 w-8 text-zinc-400" />
           </div>
           <p className="mt-4 text-sm font-medium text-zinc-500">
             Drag and drop your file here, or
@@ -972,17 +989,17 @@ function UploadScreen({
             type="file"
           />
           <button
-            className="mx-auto mt-4 flex min-h-12 w-full items-center justify-between rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-left transition-colors duration-200 hover:bg-zinc-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-950"
+            className="mx-auto mt-4 flex min-h-12 w-full items-center justify-between rounded-xl border border-zinc-700 bg-zinc-800/80 px-4 py-3 text-left transition-colors duration-200 hover:bg-zinc-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-500"
             onClick={() => fileInputRef.current?.click()}
             type="button"
           >
             <div className="flex items-center gap-3">
-              <FileText className="h-5 w-5 text-zinc-500" />
-              <span className="text-sm font-semibold text-zinc-800">
+              <FileText className="h-5 w-5 text-zinc-400" />
+              <span className="text-sm font-semibold text-zinc-200">
                 {selectedFileName || "Choose transactions.csv"}
               </span>
             </div>
-            <span className={`text-xs font-bold ${sourceRows.length > 0 ? "text-emerald-600" : "text-zinc-400"}`}>
+            <span className={`text-xs font-bold ${sourceRows.length > 0 ? "text-emerald-400" : "text-zinc-500"}`}>
               {sourceRows.length > 0 ? "Loaded" : "Browse"}
             </span>
           </button>
@@ -990,18 +1007,18 @@ function UploadScreen({
 
         {/* Error */}
         {uploadError && (
-          <div className="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-800">
+          <div className="mt-4 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm font-semibold text-red-400">
             {uploadError}
           </div>
         )}
 
         {/* Success summary */}
         {sourceRows.length > 0 && !uploadError && (
-          <div className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3">
-            <p className="text-sm font-semibold text-emerald-900">
+          <div className="mt-4 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3">
+            <p className="text-sm font-semibold text-emerald-400">
               {number.format(sourceRows.length)} transactions · {number.format(loadedCards)} cards loaded from {selectedFileName}.
             </p>
-            <p className="mt-1 text-sm text-emerald-700">
+            <p className="mt-1 text-sm text-emerald-500/80">
               {isPythonScored
                 ? "Python fraud scores detected — scores will be used directly."
                 : "Mock scoring will be applied; flagged cases sent to review."}
@@ -1011,9 +1028,9 @@ function UploadScreen({
 
         {/* Warnings */}
         {uploadWarnings.length > 0 && (
-          <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
-            <p className="text-sm font-semibold text-amber-950">Rows skipped</p>
-            <ul className="mt-1.5 space-y-1 text-sm text-amber-800">
+          <div className="mt-4 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3">
+            <p className="text-sm font-semibold text-amber-400">Rows skipped</p>
+            <ul className="mt-1.5 space-y-1 text-sm text-amber-500/80">
               {uploadWarnings.slice(0, 4).map((warning) => (
                 <li key={warning}>{warning}</li>
               ))}
@@ -1032,7 +1049,7 @@ function UploadScreen({
 
         {/* Process CTA */}
         <button
-          className="mt-5 flex min-h-13 w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-zinc-950 px-5 py-3.5 text-base font-semibold text-white shadow-sm transition-colors duration-200 hover:bg-zinc-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-950 disabled:cursor-not-allowed disabled:bg-zinc-300 disabled:text-zinc-500"
+          className="mt-5 flex min-h-12 w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-emerald-500 px-5 py-3.5 text-base font-semibold text-zinc-950 shadow-sm transition-colors duration-200 hover:bg-emerald-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-400 disabled:cursor-not-allowed disabled:bg-zinc-700 disabled:text-zinc-500"
           disabled={processing || sourceRows.length === 0}
           onClick={onProcess}
           type="button"
@@ -1045,15 +1062,15 @@ function UploadScreen({
           {processing ? "Analysing…" : "Analyse Transactions"}
         </button>
 
-        {/* Expected columns (collapsible, low visual weight) */}
-        <details className="mt-5 rounded-xl border border-zinc-200 bg-white px-4 py-3">
-          <summary className="cursor-pointer text-sm font-medium text-zinc-500 hover:text-zinc-700">
+        {/* Expected columns */}
+        <details className="mt-5 rounded-xl border border-zinc-800 bg-zinc-900/50 px-4 py-3">
+          <summary className="cursor-pointer text-sm font-medium text-zinc-600 hover:text-zinc-400">
             Expected CSV columns ({csvInputFields.length})
           </summary>
           <div className="mt-3 flex flex-wrap gap-2">
             {csvInputFields.map((field) => (
               <span
-                className="rounded-full border border-zinc-200 bg-zinc-50 px-2.5 py-1 font-mono text-xs font-semibold text-zinc-600"
+                className="rounded-full border border-zinc-700 bg-zinc-800 px-2.5 py-1 font-mono text-xs font-semibold text-zinc-400"
                 key={field}
               >
                 {field}
