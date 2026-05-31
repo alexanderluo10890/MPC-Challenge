@@ -11,6 +11,7 @@
   "dependencies": {
     "@types/papaparse": "^5.5.2",
     "@types/three": "^0.184.1",
+    "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "framer-motion": "^12.40.0",
     "lucide-react": "^1.17.0",
@@ -19,6 +20,7 @@
     "postprocessing": "^6.39.1",
     "react": "19.2.4",
     "react-dom": "19.2.4",
+    "recharts": "^3.8.1",
     "tailwind-merge": "^3.6.0",
     "three": "^0.184.0"
   },

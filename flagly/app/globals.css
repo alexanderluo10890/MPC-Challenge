@@ -23,6 +23,11 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-card: #0A0A0C;
+  --color-card-foreground: #ffffff;
+  --color-border: rgba(255, 255, 255, 0.10);
+  --color-muted: #101018;
+  --color-muted-foreground: #6b7280;
   --font-sans: Inter, "SF Pro Display", "Segoe UI", Arial, sans-serif;
   --font-mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
 }
@@ -135,6 +140,12 @@ body {
 @keyframes fade-in-up {
   from { opacity: 0; transform: translateY(10px); }
   to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes ripple {
+  0%   { opacity: 0.6; transform: translate(-50%, -50%) scale(0.75); }
+  80%  { opacity: 0.08; }
+  100% { opacity: 0;   transform: translate(-50%, -50%) scale(1.55); }
 }
 
 /* Dot grid texture */
