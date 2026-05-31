@@ -10,6 +10,23 @@ import pandas as pd
 import numpy as np
 
 
+LOW_RISK_CATEGORIES = {
+    "subscription",
+    "entertainment",
+    "utilities",
+    "restaurant",
+    "grocery",
+}
+
+HIGH_RISK_CATEGORIES = {
+    "gift_card",
+    "electronics",
+    "travel",
+    "atm",
+    "online_retail",
+}
+
+
 # ─── Loading & Cleaning ───────────────────────────────────────────────────────
 
 def load_transactions(input_path):
@@ -366,6 +383,30 @@ def add_fraud_scores(df):
         small_1h      = int(row['small_txn_count_1h_for_card'])
         gift_24h      = int(row['card_gift_card_count_24h'])
         elec_24h      = int(row['card_electronics_count_24h'])
+        is_common_cross_border_online = (
+            channel == "online"
+            and row["cardholder_country"] == "CA"
+            and row["merchant_country"] == "US"
+        )
+
+        strong_signal_count = sum([
+            amount_ratio >= 5,
+            device_unique >= 2,
+            ip_unique >= 2,
+            txn_30min >= 3,
+            txn_1h >= 5,
+            online_30min >= 3,
+            merch_30min >= 3,
+            small_1h >= 3,
+            bool(row['had_small_txn_before_large_2h']),
+            bool(row['has_large_txn_after_small_2h']),
+            merch_1h >= 3,
+            merch_2h >= 5,
+            high_val_2h >= 3,
+            gift_24h >= 2,
+            elec_24h >= 2,
+            category == "gift_card" and amount >= 500,
+        ])
 
         # ── Amount anomaly ───────────────────────────────────────────────
         if amount_ratio >= 10:
@@ -390,8 +431,15 @@ def add_fraud_scores(df):
 
         # ── Category ─────────────────────────────────────────────────────
         if row['is_rare_category_for_card']:
-            score += 15
-            reasons.append("Merchant category is rare for this card")
+            if category in LOW_RISK_CATEGORIES and amount < 50:
+                score += 3
+                reasons.append("Category is uncommon for this card, but low-risk and low-value")
+            elif category in HIGH_RISK_CATEGORIES:
+                score += 15
+                reasons.append("Merchant category is rare and higher-risk for this card")
+            else:
+                score += 8
+                reasons.append("Merchant category is rare for this card")
 
         if category == 'gift_card':
             score += 15
@@ -415,11 +463,15 @@ def add_fraud_scores(df):
 
         # ── Country ──────────────────────────────────────────────────────
         if row['merchant_country'] != row['cardholder_country']:
-            score += 10
-            reasons.append(
-                f"Merchant country ({row['merchant_country']}) differs from "
-                f"cardholder country ({row['cardholder_country']})"
-            )
+            if is_common_cross_border_online and amount < 100:
+                score += 3
+                reasons.append("US online merchant for Canadian cardholder; weak signal")
+            else:
+                score += 10
+                reasons.append(
+                    f"Merchant country ({row['merchant_country']}) differs from "
+                    f"cardholder country ({row['cardholder_country']})"
+                )
 
         if row['is_rare_country_for_card']:
             score += 15
@@ -445,12 +497,20 @@ def add_fraud_scores(df):
 
         # ── Device / IP ───────────────────────────────────────────────────
         if row['is_rare_device_for_card']:
-            score += 15
-            reasons.append("Device is rare for this card")
+            if amount_ratio >= 5 or amount >= 100 or ip_unique >= 2:
+                score += 15
+                reasons.append("Device is rare for this card")
+            else:
+                score += 5
+                reasons.append("Device is rare for this card, but transaction value is low")
 
         if row['is_rare_ip_for_card']:
-            score += 15
-            reasons.append("IP address is rare for this card")
+            if amount_ratio >= 5 or amount >= 100 or device_unique >= 2:
+                score += 15
+                reasons.append("IP address is rare for this card")
+            else:
+                score += 5
+                reasons.append("IP address is rare for this card, but transaction value is low")
 
         # Bonus: both device and IP are new
         if row['is_rare_device_for_card'] and row['is_rare_ip_for_card']:
@@ -561,36 +621,22 @@ def add_fraud_scores(df):
         except Exception:
             score = float(score)
 
-        score = int(min(100, round(score)))
+        # Low-value transactions should not become High/Critical unless they
+        # connect to a stronger fraud pattern.
+        if amount < 25 and strong_signal_count == 0:
+            score = min(score, 35)
+            reasons.append("Low-value transaction: risk reduced because no strong fraud pattern was found")
+        elif amount < 50 and strong_signal_count == 0:
+            score = min(score, 45)
+            reasons.append("Low-value transaction: capped because signals are weak")
 
-        # ── Major signal count (20 defined conditions) ────────────────────
-        major_signals = sum([
-            int(amount_ratio >= 5),
-            int(bool(row['is_rare_category_for_card'])),
-            int(bool(row['is_rare_country_for_card'])),
-            int(bool(row['is_rare_device_for_card'])),
-            int(bool(row['is_rare_ip_for_card'])),
-            int(device_unique >= 2),
-            int(ip_unique >= 2),
-            int(txn_30min >= 3),
-            int(txn_1h >= 5),
-            int(online_30min >= 3),
-            int(merch_30min >= 3),
-            int(small_1h >= 3),
-            int(bool(row['had_small_txn_before_large_2h'])),
-            int(bool(row['has_large_txn_after_small_2h'])),
-            int(merch_1h >= 3),
-            int(merch_2h >= 5),
-            int(high_val_2h >= 3),
-            int(category in ('gift_card', 'electronics') and amount >= 500),
-            int(gift_24h >= 2),
-            int(elec_24h >= 2),
-        ])
+        score = int(min(100, round(score)))
+        major_signals = int(strong_signal_count)
 
         # ── Risk level ────────────────────────────────────────────────────
-        if score >= 85:
+        if score >= 85 and strong_signal_count >= 2:
             risk_level = 'Critical'
-        elif score >= 70:
+        elif score >= 70 and strong_signal_count >= 1:
             risk_level = 'High'
         elif score >= 40:
             risk_level = 'Medium'
@@ -598,13 +644,13 @@ def add_fraud_scores(df):
             risk_level = 'Low'
 
         # ── Flag status + recommended action ──────────────────────────────
-        if score >= 85 and major_signals >= 1:
+        if risk_level == 'Critical':
             flag_status = 'Flagged'
             action = 'Escalate'
-        elif score >= 70 and major_signals >= 2:
+        elif risk_level == 'High':
             flag_status = 'Flagged'
             action = 'Review'
-        elif score >= 40:
+        elif risk_level == 'Medium':
             flag_status = 'Watchlist'
             action = 'Watchlist'
         else:
@@ -632,7 +678,7 @@ def add_fraud_scores(df):
 
         # For high-risk transactions that fell through to the generic pattern,
         # assign a more specific fallback based on the strongest signal present.
-        if score >= 85 and pattern == 'Unusual Card Behavior':
+        if risk_level == 'Critical' and pattern == 'Unusual Card Behavior':
             if amount_ratio >= 10:
                 pattern = 'Amount Outlier'
             elif merch_1h >= 3 or merch_2h >= 5:
@@ -664,6 +710,19 @@ def add_fraud_scores(df):
     df['reviewer_notes']     = ''
 
     return df
+
+
+def print_threshold_report(df):
+    """
+    Print score cutoffs so the reviewer queue can be calibrated against the
+    expected fraud rate. The challenge data is roughly 7% fraud, so Balanced
+    mode should usually keep Score >= 70 near the high single digits.
+    """
+    print("\n--- Threshold Calibration ---")
+    for threshold in [30, 40, 50, 60, 70, 80, 85, 90]:
+        flagged = int((df["risk_score"] >= threshold).sum())
+        pct = flagged / len(df) * 100 if len(df) else 0
+        print(f"  Score >= {threshold}: {flagged:,} transactions ({pct:.1f}%)")
 
 
 # ─── Pipeline ─────────────────────────────────────────────────────────────────
@@ -773,6 +832,8 @@ def build_features(input_path, output_path):
     print(f"  Flagged transactions:                      {n_flagged:,}")
     print(f"  Watchlist transactions:                    {n_watchlist:,}")
     print(f"  Flagged + Watchlist:                       {n_flagged + n_watchlist:,}")
+
+    print_threshold_report(df)
 
     print("\n--- Top 15 Highest-Risk Transactions ---")
     top15 = df.nlargest(15, 'risk_score')[

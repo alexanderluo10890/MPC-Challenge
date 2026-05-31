@@ -240,7 +240,7 @@ function smoothDampVec2(
   const omega = 2 / st;
   const x = omega * dt;
   const exp = 1 / (1 + x + 0.48 * x * x + 0.235 * x * x * x);
-  let change = current.clone().sub(target);
+  const change = current.clone().sub(target);
   const origTo = target.clone();
   const temp = vel.clone().addScaledVector(change, omega).multiplyScalar(dt);
   vel.sub(temp.clone().multiplyScalar(omega)).multiplyScalar(exp);
@@ -347,7 +347,7 @@ export function GridScan({
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
-    let leaveTimer: ReturnType<typeof setTimeout> | null = null;
+    let leaveTimer: number | null = null;
 
     const onMove = (e: MouseEvent) => {
       if (leaveTimer) { clearTimeout(leaveTimer); leaveTimer = null; }
@@ -450,13 +450,11 @@ export function GridScan({
       composerRef.current = composer;
       composer.addPass(new RenderPass(scene, camera));
       const bloom = new BloomEffect({ intensity: 1.0, luminanceThreshold: bloomThreshold, luminanceSmoothing: bloomSmoothing });
-      // @ts-expect-error postprocessing BlendMode API
       bloom.blendMode.opacity.value = Math.max(0, bloomIntensity);
       bloomRef.current = bloom;
       const chroma = new ChromaticAberrationEffect({ offset: new THREE.Vector2(chromaticAberration, chromaticAberration), radialModulation: true, modulationOffset: 0.0 });
       chromaRef.current = chroma;
       const effectPass = new EffectPass(camera, bloom, chroma);
-      // @ts-expect-error postprocessing EffectPass API
       effectPass.renderToScreen = true;
       composer.addPass(effectPass);
     }
@@ -502,7 +500,6 @@ export function GridScan({
       renderer.forceContextLoss();
       if (container.contains(renderer.domElement)) container.removeChild(renderer.domElement);
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sensitivity, lineThickness, linesColor, scanColor, scanOpacity, gridScale, lineStyle, lineJitter, scanDirection, enablePost, noiseIntensity, bloomIntensity, bloomThreshold, bloomSmoothing, chromaticAberration, scanGlow, scanSoftness, scanPhaseTaper, scanDuration, scanDelay, smoothTime, skewScale, yBoost, tiltScale, yawScale]);
 
   // Prop updates without full re-init
@@ -525,7 +522,6 @@ export function GridScan({
     m.uniforms.uScanDuration.value = Math.max(0.05, scanDuration);
     m.uniforms.uScanDelay.value = Math.max(0.0, scanDelay);
     if (bloomRef.current) {
-      // @ts-expect-error postprocessing BlendMode API
       bloomRef.current.blendMode.opacity.value = Math.max(0, bloomIntensity);
     }
     if (chromaRef.current) chromaRef.current.offset.set(chromaticAberration, chromaticAberration);

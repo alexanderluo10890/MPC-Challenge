@@ -42,6 +42,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { createPortal } from "react-dom";
 import {
   type Channel,
   type FraudCase,
@@ -191,6 +192,39 @@ const statusTone: Record<ReviewStatus, string> = {
   dismissed_flag: "border-white/10 bg-white/5 text-gray-400",
   escalated_fraud: "border-red-500/30 bg-red-500/10 text-red-400",
 };
+
+const detectorKnobs = [
+  {
+    label: "Amount anomaly",
+    value: "3x, 5x, 10x median",
+    description: "Rewards transactions that are far above a card's usual spend.",
+  },
+  {
+    label: "Velocity windows",
+    value: "30 min, 1 h, 2 h",
+    description: "Looks for bursty activity across short time windows.",
+  },
+  {
+    label: "Identity reuse",
+    value: "Device/IP shared",
+    description: "Boosts risk when a device or IP is reused across cards.",
+  },
+  {
+    label: "Merchant burst",
+    value: "1 h / 2 h lookbacks",
+    description: "Highlights rapid spikes in unique cards or high-value traffic at one merchant.",
+  },
+  {
+    label: "Category bursts",
+    value: "24 h windows",
+    description: "Surfaces repeated gift card or electronics purchases on the same card.",
+  },
+  {
+    label: "Dormancy trigger",
+    value: "7 days inactive",
+    description: "Adds risk when a card reappears after a long gap.",
+  },
+] as const;
 
 const wait = (ms: number) =>
   new Promise<void>((resolve) => {
@@ -779,7 +813,6 @@ export default function FraudFrogApp() {
             transition={transitionOut}
           >
             <UploadScreen
-              datasetSummary={datasetSummary}
               isPythonScored={isPythonScored}
               onFileSelected={handleFileSelected}
               onProcess={handleProcessTransactions}
@@ -866,7 +899,6 @@ export default function FraudFrogApp() {
                   setActiveIndex(0);
                   setFilters(nextFilters);
                 }}
-                totalTransactions={datasetSummary.totalTransactions}
               />
             )}
 
@@ -927,7 +959,6 @@ export default function FraudFrogApp() {
 }
 
 function UploadScreen({
-  datasetSummary,
   isPythonScored,
   onFileSelected,
   onProcess,
@@ -938,7 +969,6 @@ function UploadScreen({
   uploadError,
   uploadWarnings,
 }: {
-  datasetSummary: DatasetSummary;
   isPythonScored: boolean;
   onFileSelected: (file: File | null) => void;
   onProcess: () => void;
@@ -1354,7 +1384,6 @@ function ReviewQueue({
   searchTerm,
   sensitivity,
   setFilters,
-  totalTransactions,
 }: {
   activeIndex: number;
   activeTab: DetailTab;
@@ -1380,7 +1409,6 @@ function ReviewQueue({
   searchTerm: string;
   sensitivity: SensitivityMode;
   setFilters: Dispatch<SetStateAction<FiltersState>>;
-  totalTransactions: number;
 }) {
   return (
     <main className="mx-auto min-h-screen w-full max-w-[1500px] px-4 py-5 sm:px-6">
@@ -2163,6 +2191,8 @@ function SensitivityControl({
   onChange: (mode: SensitivityMode) => void;
   totalTransactions: number;
 }) {
+  const [showKnobs, setShowKnobs] = useState(false);
+
   return (
     <section className="rounded-lg border border-white/[0.08] bg-[#0A0A0C] p-4 shadow-sm">
       <div className="flex items-center justify-between gap-3">
@@ -2174,7 +2204,15 @@ function SensitivityControl({
             {sensitivityProfiles[sensitivity].precision}
           </p>
         </div>
-        <SlidersHorizontal className="h-5 w-5 text-gray-500" />
+        <button
+          className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-white/10 bg-white/5 text-gray-400 shadow-sm transition hover:bg-white/10 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500"
+          onClick={() => setShowKnobs(true)}
+          type="button"
+          aria-label="Open detector controls"
+          aria-expanded={showKnobs}
+        >
+          <SlidersHorizontal className="h-4 w-4" />
+        </button>
       </div>
       <div
         className={`mt-4 grid gap-2 ${compact ? "grid-cols-1" : "sm:grid-cols-3"}`}
@@ -2199,6 +2237,62 @@ function SensitivityControl({
       <p className="mt-4 rounded-lg border border-white/[0.08] bg-[#101018] p-3 text-sm leading-6 text-gray-400">
         {getSensitivitySummary(sensitivity, flaggedCount, totalTransactions)}
       </p>
+      {showKnobs && typeof document !== "undefined"
+        ? createPortal(
+            <div
+              className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-950/50 px-4 py-6 backdrop-blur-sm"
+              onClick={() => setShowKnobs(false)}
+            >
+              <div
+                className="w-full max-w-2xl rounded-2xl border border-zinc-200 bg-white p-5 shadow-2xl"
+                onClick={(event) => event.stopPropagation()}
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="detector-controls-title"
+              >
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <h3
+                      id="detector-controls-title"
+                      className="text-sm font-semibold text-zinc-950"
+                    >
+                      Detector controls
+                    </h3>
+                    <p className="mt-1 text-xs leading-5 text-zinc-500">
+                      These are the main rule inputs behind the fraud detector.
+                    </p>
+                  </div>
+                  <button
+                    className="inline-flex h-8 w-8 items-center justify-center rounded-md text-zinc-500 transition hover:bg-zinc-100 hover:text-zinc-950"
+                    onClick={() => setShowKnobs(false)}
+                    type="button"
+                    aria-label="Close detector controls"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+                <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                  {detectorKnobs.map((knob) => (
+                    <div key={knob.label} className="rounded-lg bg-zinc-50 p-3">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <span className="text-sm font-medium text-zinc-950">
+                          {knob.label}
+                        </span>
+                        <span className="rounded-full border border-zinc-200 bg-white px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-zinc-600">
+                          {knob.value}
+                        </span>
+                      </div>
+                      <p className="mt-2 text-sm leading-5 text-zinc-600">
+                        {knob.description}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>,
+            document.body,
+          )
+        : null}
     </section>
   );
 }
@@ -3081,7 +3175,32 @@ function PieChart({
   const cy = 80;
   const outerR = 68;
   const innerR = 40;
-  let cumAngle = -90;
+  const chartSegments =
+    total === 0
+      ? []
+      : data.reduce<{
+        endAngle: number;
+        segments: Array<{ color: string; label: string; path: string }>;
+      }>(
+        (accumulator, segment) => {
+          const angle = (segment.value / total) * 360;
+          const startAngle = accumulator.endAngle;
+          const endAngle = startAngle + angle;
+
+          return {
+            endAngle,
+            segments: [
+              ...accumulator.segments,
+              {
+                color: segment.color,
+                label: segment.label,
+                path: donutSlicePath(cx, cy, outerR, innerR, startAngle, endAngle),
+              },
+            ],
+          };
+        },
+        { endAngle: -90, segments: [] },
+      ).segments;
 
   return (
     <div className="rounded-xl border border-white/[0.08] bg-[#0A0A0C] p-6 shadow-sm">
@@ -3097,12 +3216,9 @@ function PieChart({
       ) : (
         <div className="mt-5 flex flex-col items-center gap-6 sm:flex-row">
           <svg className="shrink-0" height={160} viewBox="0 0 160 160" width={160}>
-            {data.map((segment) => {
-              const angle = (segment.value / total) * 360;
-              const path = donutSlicePath(cx, cy, outerR, innerR, cumAngle, cumAngle + angle);
-              cumAngle += angle;
-              return <path d={path} fill={segment.color} key={segment.label} />;
-            })}
+            {chartSegments.map((segment) => (
+              <path d={segment.path} fill={segment.color} key={segment.label} />
+            ))}
             <text
               dominantBaseline="middle"
               fill="#ffffff"
