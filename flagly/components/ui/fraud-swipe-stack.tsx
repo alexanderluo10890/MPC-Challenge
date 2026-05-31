@@ -16,6 +16,7 @@ import {
   Clock3,
   Info,
   ShieldAlert,
+  Sparkles,
   Undo2,
   X,
 } from "lucide-react";
@@ -53,6 +54,7 @@ export interface FraudSwipeStackProps {
   onFraud: (caseId: string) => void;
   onReview?: (caseId: string) => void;
   onUndo?: (caseId: string) => void;
+  getSummary?: (fraudCase: FraudCase) => string;
   onComplete?: () => void;
   totalCasesInQueue: number;
   startIndexOffset?: number;
@@ -67,6 +69,7 @@ export function FraudSwipeStack({
   onFraud,
   onReview,
   onUndo,
+  getSummary,
   onComplete,
   totalCasesInQueue,
   startIndexOffset = 0,
@@ -84,6 +87,8 @@ export function FraudSwipeStack({
   const [history, setHistory] = useState<FraudCase[]>([]);
 
   const [detailCase, setDetailCase] = useState<FraudCase | null>(null);
+  // Card surfaced by swiping up — shows its AI summary, then snaps back.
+  const [summaryCase, setSummaryCase] = useState<FraudCase | null>(null);
   const swipingRef = useRef(false);
 
   const x = useMotionValue(0);
@@ -92,6 +97,7 @@ export function FraudSwipeStack({
   const rightOpacity = useTransform(x, [35, 95], [0, 1]);
   const leftOpacity  = useTransform(x, [-95, -35], [1, 0]);
   const downOpacity  = useTransform(y, [35, 95], [0, 1]);
+  const upOpacity    = useTransform(y, [-95, -35], [1, 0]);
 
   const isDone = queue.length === 0;
   const visibleCases = queue.slice(0, 3);
@@ -138,6 +144,17 @@ export function FraudSwipeStack({
     onUndo?.(last.transaction_id);
   }, [history, onUndo, x, y]);
 
+  // Swipe up reveals the AI summary for the top card without categorizing it —
+  // the card stays in the queue and snaps back to center.
+  const openSummary = useCallback(() => {
+    if (swipingRef.current) return;
+    const top = queue[0];
+    if (!top) return;
+    setSummaryCase(top);
+    void animateMV(x, 0, { type: "spring", stiffness: 380, damping: 28 });
+    void animateMV(y, 0, { type: "spring", stiffness: 380, damping: 28 });
+  }, [queue, x, y]);
+
   // Keyboard shortcuts
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -147,14 +164,17 @@ export function FraudSwipeStack({
         target?.tagName === "TEXTAREA" ||
         target?.isContentEditable;
       if (isTyping) return;
+      // Don't act on the card underneath an open sheet (it handles its own Esc).
+      if (detailCase || summaryCase) return;
       if (e.key === "ArrowRight") { e.preventDefault(); void swipe("right"); }
       else if (e.key === "ArrowLeft") { e.preventDefault(); void swipe("left"); }
       else if (e.key === "ArrowDown") { e.preventDefault(); void swipe("down"); }
+      else if (e.key === "ArrowUp") { e.preventDefault(); openSummary(); }
       else if (e.key === "u" || e.key === "U" || e.key === "Backspace") { e.preventDefault(); undo(); }
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [swipe, undo]);
+  }, [swipe, undo, openSummary, detailCase, summaryCase]);
 
   // Notify parent when the queue is fully processed
   useEffect(() => {
@@ -257,11 +277,15 @@ export function FraudSwipeStack({
               onDragEnd={(_, info) => {
                 if (swipingRef.current) return;
                 const absX = Math.abs(info.offset.x);
-                const absY = info.offset.y;
-                if (absX > 80 && absX > Math.abs(absY)) {
+                const offsetY = info.offset.y;
+                const absY = Math.abs(offsetY);
+                if (absX > 80 && absX > absY) {
                   swipe(info.offset.x > 0 ? "right" : "left");
-                } else if (absY > 80 && absY > absX) {
+                } else if (offsetY > 80 && absY > absX) {
                   swipe("down");
+                } else if (offsetY < -80 && absY > absX) {
+                  // Up = reveal AI summary (card stays in the queue, snaps back).
+                  openSummary();
                 } else {
                   void animateMV(x, 0, { type: "spring", stiffness: 380, damping: 28 });
                   void animateMV(y, 0, { type: "spring", stiffness: 380, damping: 28 });
@@ -291,6 +315,12 @@ export function FraudSwipeStack({
                       color="bg-amber-400"
                       icon={<ChevronDown className="h-14 w-14 text-white" />}
                       label="DISMISS"
+                    />
+                    <SwipeOverlay
+                      opacity={upOpacity}
+                      color="bg-violet-500"
+                      icon={<Sparkles className="h-14 w-14 text-white" />}
+                      label="AI SUMMARY"
                     />
                   </>
                 )}
@@ -330,23 +360,35 @@ export function FraudSwipeStack({
         />
       </div>
 
-      {/* Undo last swipe */}
-      <button
-        onClick={undo}
-        disabled={history.length === 0}
-        type="button"
-        aria-label="Undo last swipe - U"
-        className="mt-4 inline-flex cursor-pointer items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-semibold text-zinc-600 transition-colors duration-200 hover:bg-zinc-100 hover:text-zinc-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-950 disabled:cursor-not-allowed disabled:text-zinc-300 disabled:hover:bg-transparent"
-      >
-        <Undo2 className="h-4 w-4" />
-        Undo last
-      </button>
+      {/* Secondary actions */}
+      <div className="mt-4 flex items-center gap-2">
+        <button
+          onClick={openSummary}
+          type="button"
+          aria-label="AI summary - Up arrow"
+          className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-semibold text-violet-700 transition-colors duration-200 hover:bg-violet-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-500"
+        >
+          <Sparkles className="h-4 w-4" />
+          AI summary
+        </button>
+        <button
+          onClick={undo}
+          disabled={history.length === 0}
+          type="button"
+          aria-label="Undo last swipe - U"
+          className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-semibold text-zinc-600 transition-colors duration-200 hover:bg-zinc-100 hover:text-zinc-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-950 disabled:cursor-not-allowed disabled:text-zinc-300 disabled:hover:bg-transparent"
+        >
+          <Undo2 className="h-4 w-4" />
+          Undo last
+        </button>
+      </div>
 
       {/* Keyboard hint */}
       <p className="mt-3 text-center text-xs text-zinc-400">
         <kbd className="font-mono">←</kbd> Escalate &nbsp;·&nbsp;
         <kbd className="font-mono">→</kbd> Approve &nbsp;·&nbsp;
         <kbd className="font-mono">↓</kbd> Dismiss &nbsp;·&nbsp;
+        <kbd className="font-mono">↑</kbd> AI summary &nbsp;·&nbsp;
         <kbd className="font-mono">U</kbd> Undo
       </p>
 
@@ -359,7 +401,122 @@ export function FraudSwipeStack({
           />
         )}
       </AnimatePresence>
+
+      {/* AI summary sheet (swipe up) */}
+      <AnimatePresence>
+        {summaryCase && (
+          <SummarySheet
+            fraudCase={summaryCase}
+            summary={getSummary?.(summaryCase) ?? ""}
+            onClose={() => setSummaryCase(null)}
+          />
+        )}
+      </AnimatePresence>
     </div>
+  );
+}
+
+// ─── AI summary bottom sheet (swipe up) ───────────────────────────────────────
+
+function SummarySheet({
+  fraudCase,
+  summary,
+  onClose,
+}: {
+  fraudCase: FraudCase;
+  summary: string;
+  onClose: () => void;
+}) {
+  const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [onClose]);
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(summary);
+      setCopied(true);
+    } catch {
+      setCopied(false);
+    }
+  };
+
+  return (
+    <motion.div
+      className="fixed inset-0 z-50 flex items-end justify-center sm:items-center"
+      role="dialog"
+      aria-modal="true"
+      aria-label={`AI summary for ${fraudCase.transaction_id}`}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+    >
+      {/* Backdrop */}
+      <button
+        className="absolute inset-0 cursor-default bg-zinc-950/40 backdrop-blur-sm"
+        onClick={onClose}
+        aria-label="Close AI summary"
+        type="button"
+      />
+
+      {/* Sheet */}
+      <motion.div
+        className="relative w-full max-w-md rounded-t-2xl border border-zinc-200 bg-white p-6 shadow-2xl sm:rounded-2xl"
+        initial={{ y: 40, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        exit={{ y: 40, opacity: 0 }}
+        transition={{ type: "spring", damping: 30, stiffness: 320 }}
+      >
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-violet-50">
+              <Sparkles className="h-5 w-5 text-violet-600" />
+            </span>
+            <div>
+              <h3 className="text-base font-bold text-zinc-950">AI Summary</h3>
+              <p className="font-mono text-xs text-zinc-400">{fraudCase.transaction_id}</p>
+            </div>
+          </div>
+          <button
+            className="rounded-lg p-1.5 text-zinc-400 transition-colors hover:bg-zinc-100 hover:text-zinc-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-950"
+            onClick={onClose}
+            type="button"
+            aria-label="Close"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        <p className="mt-4 text-sm leading-6 text-zinc-700">{summary}</p>
+
+        <p className="mt-3 text-xs text-zinc-400">
+          Summarizes visible fraud signals only — the score is unchanged.
+        </p>
+
+        <div className="mt-5 flex gap-2">
+          <button
+            className="inline-flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-xl border border-zinc-200 bg-zinc-50 py-2.5 text-sm font-semibold text-zinc-700 transition-colors hover:bg-zinc-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-950"
+            onClick={handleCopy}
+            type="button"
+          >
+            <Info className="h-4 w-4" />
+            {copied ? "Copied" : "Copy"}
+          </button>
+          <button
+            className="inline-flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-xl border border-violet-200 bg-violet-50 py-2.5 text-sm font-semibold text-violet-700 transition-colors hover:bg-violet-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-500"
+            onClick={onClose}
+            type="button"
+          >
+            Back to card
+          </button>
+        </div>
+      </motion.div>
+    </motion.div>
   );
 }
 

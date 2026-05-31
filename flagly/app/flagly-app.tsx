@@ -1170,7 +1170,7 @@ export default function FraudFrogApp() {
                           Use quick review for obvious cases. Switch to Review Queue for uncertain cases requiring full details.
                         </p>
                         <p className="mt-1 text-xs text-zinc-400">
-                          Swipe right to approve · left to escalate · down to defer
+                          Swipe right to approve · left to escalate · down to defer · up for AI summary
                         </p>
                       </div>
                       <span className="shrink-0 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-sm font-semibold text-emerald-800">
@@ -1184,6 +1184,7 @@ export default function FraudFrogApp() {
                     onFraud={(id) => handleSwipeAction(id, "escalated_fraud")}
                     onReview={(id) => handleSwipeAction(id, "dismissed_flag")}
                     onUndo={handleSwipeUndo}
+                    getSummary={makeSummary}
                     onComplete={() => setView("complete")}
                     totalCasesInQueue={casesWithStatuses.length}
                     startIndexOffset={reviewedCount}
