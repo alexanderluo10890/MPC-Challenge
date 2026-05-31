@@ -42,6 +42,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { createPortal } from "react-dom";
 import {
   type Channel,
   type FraudCase,
@@ -191,6 +192,39 @@ const statusTone: Record<ReviewStatus, string> = {
   dismissed_flag: "border-zinc-300 bg-zinc-100 text-zinc-700",
   escalated_fraud: "border-red-200 bg-red-50 text-red-800",
 };
+
+const detectorKnobs = [
+  {
+    label: "Amount anomaly",
+    value: "3x, 5x, 10x median",
+    description: "Rewards transactions that are far above a card's usual spend.",
+  },
+  {
+    label: "Velocity windows",
+    value: "30 min, 1 h, 2 h",
+    description: "Looks for bursty activity across short time windows.",
+  },
+  {
+    label: "Identity reuse",
+    value: "Device/IP shared",
+    description: "Boosts risk when a device or IP is reused across cards.",
+  },
+  {
+    label: "Merchant burst",
+    value: "1 h / 2 h lookbacks",
+    description: "Highlights rapid spikes in unique cards or high-value traffic at one merchant.",
+  },
+  {
+    label: "Category bursts",
+    value: "24 h windows",
+    description: "Surfaces repeated gift card or electronics purchases on the same card.",
+  },
+  {
+    label: "Dormancy trigger",
+    value: "7 days inactive",
+    description: "Adds risk when a card reappears after a long gap.",
+  },
+] as const;
 
 const wait = (ms: number) =>
   new Promise<void>((resolve) => {
@@ -2163,6 +2197,13 @@ function SensitivityControl({
   onChange: (mode: SensitivityMode) => void;
   totalTransactions: number;
 }) {
+  const [showKnobs, setShowKnobs] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
   return (
     <section className="rounded-lg border border-zinc-200 bg-white p-4 shadow-sm">
       <div className="flex items-center justify-between gap-3">
@@ -2174,7 +2215,15 @@ function SensitivityControl({
             {sensitivityProfiles[sensitivity].precision}
           </p>
         </div>
-        <SlidersHorizontal className="h-5 w-5 text-zinc-500" />
+        <button
+          className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-zinc-200 bg-white text-zinc-500 shadow-sm transition hover:bg-zinc-50 hover:text-zinc-950 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-950"
+          onClick={() => setShowKnobs(true)}
+          type="button"
+          aria-label="Open detector controls"
+          aria-expanded={showKnobs}
+        >
+          <SlidersHorizontal className="h-4 w-4" />
+        </button>
       </div>
       <div
         className={`mt-4 grid gap-2 ${compact ? "grid-cols-1" : "sm:grid-cols-3"}`}
@@ -2199,6 +2248,62 @@ function SensitivityControl({
       <p className="mt-4 rounded-lg border border-zinc-200 bg-zinc-50 p-3 text-sm leading-6 text-zinc-600">
         {getSensitivitySummary(sensitivity, flaggedCount, totalTransactions)}
       </p>
+      {isMounted && showKnobs
+        ? createPortal(
+            <div
+              className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-950/50 px-4 py-6 backdrop-blur-sm"
+              onClick={() => setShowKnobs(false)}
+            >
+              <div
+                className="w-full max-w-2xl rounded-2xl border border-zinc-200 bg-white p-5 shadow-2xl"
+                onClick={(event) => event.stopPropagation()}
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="detector-controls-title"
+              >
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <h3
+                      id="detector-controls-title"
+                      className="text-sm font-semibold text-zinc-950"
+                    >
+                      Detector controls
+                    </h3>
+                    <p className="mt-1 text-xs leading-5 text-zinc-500">
+                      These are the main rule inputs behind the fraud detector.
+                    </p>
+                  </div>
+                  <button
+                    className="inline-flex h-8 w-8 items-center justify-center rounded-md text-zinc-500 transition hover:bg-zinc-100 hover:text-zinc-950"
+                    onClick={() => setShowKnobs(false)}
+                    type="button"
+                    aria-label="Close detector controls"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+                <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                  {detectorKnobs.map((knob) => (
+                    <div key={knob.label} className="rounded-lg bg-zinc-50 p-3">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <span className="text-sm font-medium text-zinc-950">
+                          {knob.label}
+                        </span>
+                        <span className="rounded-full border border-zinc-200 bg-white px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-zinc-600">
+                          {knob.value}
+                        </span>
+                      </div>
+                      <p className="mt-2 text-sm leading-5 text-zinc-600">
+                        {knob.description}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>,
+            document.body,
+          )
+        : null}
     </section>
   );
 }
