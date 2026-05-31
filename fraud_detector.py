@@ -227,22 +227,30 @@ def add_card_testing_features(df):
     df['small_txn_count_1h_for_card']      = 0
     df['had_small_txn_before_large_2h']    = False
     df['has_large_txn_after_small_2h']     = False
+    # Symmetric (centered) count of small online transactions in a ±1h window.
+    # Backward-only windows miss the opening probes of a card-testing burst — the
+    # first 2-3 charges score nothing because the trailing window is still empty.
+    # A centered window flags every transaction in the burst, including the start.
+    df['card_small_online_burst_1h']       = 0
 
     td_1h = pd.Timedelta(hours=1)
     td_2h = pd.Timedelta(hours=2)
 
     for _card_id, group in df.groupby('card_id'):
-        ts       = group['timestamp']
-        is_small = group['is_small_transaction']
-        is_large = group['is_large_transaction']
+        ts           = group['timestamp']
+        is_small     = group['is_small_transaction']
+        is_large     = group['is_large_transaction']
+        small_online = is_small & (group['channel'].str.lower() == 'online')
 
         for idx, row in group.iterrows():
             t           = row['timestamp']
             in_1h_back  = (ts >= t - td_1h) & (ts <= t)
             in_2h_back  = (ts >= t - td_2h) & (ts <= t)
             in_2h_fwd   = (ts > t) & (ts <= t + td_2h)
+            in_1h_sym   = (ts >= t - td_1h) & (ts <= t + td_1h)
 
             df.at[idx, 'small_txn_count_1h_for_card'] = int((in_1h_back & is_small).sum())
+            df.at[idx, 'card_small_online_burst_1h']  = int((in_1h_sym & small_online).sum())
 
             if row['is_large_transaction']:
                 df.at[idx, 'had_small_txn_before_large_2h'] = bool((in_2h_back & is_small).any())
@@ -381,6 +389,7 @@ def add_fraud_scores(df):
         merch_2h      = int(row['merchant_unique_cards_2h'])
         high_val_2h   = int(row['merchant_high_value_txn_count_2h'])
         small_1h      = int(row['small_txn_count_1h_for_card'])
+        small_burst   = int(row['card_small_online_burst_1h'])
         gift_24h      = int(row['card_gift_card_count_24h'])
         elec_24h      = int(row['card_electronics_count_24h'])
         is_common_cross_border_online = (
@@ -398,6 +407,7 @@ def add_fraud_scores(df):
             online_30min >= 3,
             merch_30min >= 3,
             small_1h >= 3,
+            small_burst >= 4,
             bool(row['had_small_txn_before_large_2h']),
             bool(row['has_large_txn_after_small_2h']),
             merch_1h >= 3,
@@ -570,6 +580,20 @@ def add_fraud_scores(df):
                 f"This card made {small_1h} small probe transactions within 1 hour"
             )
 
+        # Centered burst window catches the opening probes a backward window misses.
+        # A dense burst (6+ tiny online charges in minutes) is unambiguous card
+        # testing, so it carries enough weight to flag every probe on its own.
+        if small_burst >= 6:
+            score += 60
+            reasons.append(
+                f"This card made {small_burst} rapid small online transactions in a short window (card-testing burst)"
+            )
+        elif small_burst >= 4:
+            score += 45
+            reasons.append(
+                f"This card made {small_burst} small online transactions in quick succession (possible card testing)"
+            )
+
         # ── Merchant burst ────────────────────────────────────────────────
         if merch_2h >= 5:
             score += 30
@@ -662,7 +686,8 @@ def add_fraud_scores(df):
             pattern = 'Shared Device/IP Attack'
         elif (row['had_small_txn_before_large_2h']
               or row['has_large_txn_after_small_2h']
-              or small_1h >= 3):
+              or small_1h >= 3
+              or small_burst >= 4):
             pattern = 'Card Testing'
         elif category == 'gift_card' or gift_24h >= 2:
             pattern = 'Gift Card Burst'

@@ -183,6 +183,34 @@ class FraudDetectorTests(unittest.TestCase):
         self.assertEqual(large["flag_status"], "Flagged")
         self.assertIn("small test charges", large["fraud_reasons"])
 
+    def test_card_testing_burst_flags_opening_probe(self):
+        # A pure card-testing burst: many tiny online charges in minutes, with no
+        # large purchase afterward. A backward-only window misses the opening
+        # probes (they score ~0 because nothing precedes them); the symmetric
+        # burst window must flag every transaction in the burst, including the first.
+        rows = [
+            tx(f"steady_{i}", f"2026-04-09T09:{i:02d}:00", "card_burst", 40 + i, "Fresh Market", "grocery")
+            for i in range(8)
+        ]
+        probe_times = ["13:00:00", "13:02:30", "13:04:10", "13:05:00",
+                       "13:06:40", "13:08:15", "13:09:50", "13:11:20"]
+        for i, t in enumerate(probe_times):
+            rows.append(
+                tx(f"burst_probe_{i}", f"2026-04-10T{t}", "card_burst", 2.0 + i * 0.5,
+                   f"Probe Shop {i}", "online_retail", "online",
+                   device_id="dev_burst", ip_address="203.0.113.200")
+            )
+
+        scored = score_rows(rows)
+        first_probe = scored.loc[scored["transaction_id"] == "burst_probe_0"].iloc[0]
+        probes = scored[scored["transaction_id"].str.startswith("burst_probe_")]
+
+        # The opening probe is no longer missed.
+        self.assertGreaterEqual(first_probe["risk_score"], 60)
+        self.assertEqual(first_probe["fraud_pattern"], "Card Testing")
+        # Every probe in the burst is flagged at the Balanced threshold (60).
+        self.assertTrue((probes["risk_score"] >= 60).all())
+
     def test_flagged_transactions_have_reasons(self):
         rows = [
             tx(f"base_reason_{i}", f"2026-04-08T09:{i:02d}:00", "card_reason", 30 + i, "Local Grocer", "grocery")
