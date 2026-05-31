@@ -61,6 +61,7 @@ import {
   type SwipeSessionStats,
 } from "@/components/ui/fraud-swipe-stack";
 import { GridScan } from "@/components/ui/GridScan";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 
 type View = "upload" | "dashboard" | "review" | "audit" | "complete" | "swipe";
 type SensitivityMode = "Conservative" | "Balanced" | "Aggressive";
@@ -344,6 +345,7 @@ export default function FlaglyApp() {
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
   const [swipeStats, setSwipeStats] = useState<SwipeSessionStats>({ approved: 0, escalated: 0, review: 0 });
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const prefersReducedMotion = useReducedMotion();
 
   const flaggedCases = useMemo(
     () => getFlaggedCases(allScoredCases, sensitivity),
@@ -754,37 +756,60 @@ export default function FlaglyApp() {
     [casesWithStatuses],
   );
 
+  const exitVariants = prefersReducedMotion
+    ? { opacity: 0 }
+    : { opacity: 0, scale: 0.97, filter: "blur(3px)" };
+
+  const enterVariants = prefersReducedMotion
+    ? { opacity: 0 }
+    : { opacity: 0, y: 20 };
+
+  const transitionOut = { duration: prefersReducedMotion ? 0 : 0.26, ease: [0.4, 0, 1, 1] as const };
+  const transitionIn = { duration: prefersReducedMotion ? 0 : 0.38, ease: [0, 0, 0.2, 1] as const, delay: prefersReducedMotion ? 0 : 0.06 };
+
   return (
     <div className="min-h-screen bg-[#f5f7f8] text-zinc-950">
-      {view === "upload" && (
-        <UploadScreen
-          datasetSummary={datasetSummary}
-          isPythonScored={isPythonScored}
-          onFileSelected={handleFileSelected}
-          onProcess={handleProcessTransactions}
-          processing={processing}
-          processingStep={processingStep}
-          selectedFileName={selectedFileName}
-          sourceRows={sourceRows}
-          uploadError={uploadError}
-          uploadWarnings={uploadWarnings}
-        />
-      )}
-
-      {view !== "upload" && (
-        <div className="flex min-h-screen">
-          <Sidebar
-            view={view}
-            unreviewedCount={unreviewedCount}
-            onGoDashboard={() => setView("dashboard")}
-            onGoReview={() => setView("review")}
-            onGoAudit={() => setView("audit")}
-            onGoUpload={() => setView("upload")}
-            onGoSwipe={() => {
-              setSwipeStats({ approved: 0, escalated: 0, review: 0 });
-              setView("swipe");
-            }}
-          />
+      <AnimatePresence mode="wait" initial={false}>
+        {view === "upload" ? (
+          <motion.div
+            key="upload"
+            animate={{ opacity: 1, scale: 1, filter: "blur(0px)", y: 0 }}
+            exit={exitVariants}
+            transition={transitionOut}
+          >
+            <UploadScreen
+              datasetSummary={datasetSummary}
+              isPythonScored={isPythonScored}
+              onFileSelected={handleFileSelected}
+              onProcess={handleProcessTransactions}
+              processing={processing}
+              processingStep={processingStep}
+              selectedFileName={selectedFileName}
+              sourceRows={sourceRows}
+              uploadError={uploadError}
+              uploadWarnings={uploadWarnings}
+            />
+          </motion.div>
+        ) : (
+          <motion.div
+            key="app"
+            className="flex min-h-screen"
+            initial={enterVariants}
+            animate={{ opacity: 1, y: 0 }}
+            transition={transitionIn}
+          >
+            <Sidebar
+              view={view}
+              unreviewedCount={unreviewedCount}
+              onGoDashboard={() => setView("dashboard")}
+              onGoReview={() => setView("review")}
+              onGoAudit={() => setView("audit")}
+              onGoUpload={() => setView("upload")}
+              onGoSwipe={() => {
+                setSwipeStats({ approved: 0, escalated: 0, review: 0 });
+                setView("swipe");
+              }}
+            />
           <div className="flex min-w-0 flex-1 flex-col">
             {view === "dashboard" && (
               <Dashboard
@@ -891,8 +916,9 @@ export default function FlaglyApp() {
               </main>
             )}
           </div>
-        </div>
-      )}
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <Toast messages={toasts} />
     </div>
