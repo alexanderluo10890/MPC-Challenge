@@ -194,7 +194,7 @@ export function FraudSwipeStack({
   return (
     <div className="flex flex-col items-center px-4 py-6">
       {/* Progress header */}
-      <div className="w-full max-w-sm">
+      <div className="w-full max-w-md">
         <div className="flex items-center justify-between">
           <span className="text-sm font-semibold text-zinc-950">
             Case {caseNum} of {totalCasesInQueue}
@@ -216,7 +216,7 @@ export function FraudSwipeStack({
       </div>
 
       {/* Card stack */}
-      <div className="relative mt-5 w-full max-w-sm" style={{ height: 520 }}>
+      <div className="relative mt-5 w-full max-w-md" style={{ height: 600 }}>
         {visibleCases.map((fraudCase, i) => {
           const isTop = i === 0;
           const scale = 1 - i * 0.04;
@@ -306,7 +306,7 @@ export function FraudSwipeStack({
       </div>
 
       {/* Action buttons */}
-      <div className="mt-5 flex w-full max-w-sm items-center gap-2">
+      <div className="mt-5 flex w-full max-w-md items-center gap-2">
         <ActionButton
           onClick={() => void swipe("left")}
           label="Escalate"
