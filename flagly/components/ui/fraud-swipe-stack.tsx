@@ -511,7 +511,16 @@ function CardContent({
   );
 }
 
-// ─── Detail drawer ────────────────────────────────────────────────────────────
+// ─── Detail full-page view ────────────────────────────────────────────────────
+
+function PageSection({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <section>
+      <h3 className="mb-4 text-sm font-bold uppercase tracking-widest text-zinc-400">{title}</h3>
+      {children}
+    </section>
+  );
+}
 
 function DetailDrawer({
   fraudCase,
@@ -528,173 +537,239 @@ function DetailDrawer({
     return () => window.removeEventListener("keydown", handler);
   }, [onClose]);
 
-  const timelineColor: Record<string, string> = {
-    critical: "bg-red-500",
-    warning: "bg-amber-400",
-    normal: "bg-emerald-400",
-    review: "bg-sky-400",
+  const sev = severityStyles[fraudCase.severity];
+  const isForeign = fraudCase.cardholder_country !== fraudCase.merchant_country;
+  const isNewDevice = Boolean(fraudCase.device_id && !fraudCase.device_id.includes("known"));
+
+  // Spend bar: how wide is the "normal" portion vs the excess
+  const barNormalPct = Math.min(
+    (fraudCase.baseline.median_amount / fraudCase.amount) * 100,
+    100,
+  );
+
+  // Signal severity: first 2 = high-priority (red), rest = medium (amber)
+  const signalPriority = (i: number) =>
+    i < 2 ? "border-red-200 bg-red-50 text-red-800" : "border-amber-200 bg-amber-50 text-amber-800";
+
+  const timelineStyles: Record<string, { bar: string; badge: string; label: string }> = {
+    critical: { bar: "bg-red-500",    badge: "bg-red-100 text-red-700",    label: "Critical"  },
+    warning:  { bar: "bg-amber-400",  badge: "bg-amber-100 text-amber-700", label: "Warning"   },
+    normal:   { bar: "bg-emerald-500",badge: "bg-emerald-100 text-emerald-700",label: "Normal"  },
+    review:   { bar: "bg-sky-400",    badge: "bg-sky-100 text-sky-700",    label: "Review"    },
   };
 
+  // Full-screen page — slides in from the right like a navigation page
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-end justify-center sm:items-center"
+    <motion.div
+      className="fixed inset-0 z-50 overflow-y-auto bg-[#f5f7f8]"
       role="dialog"
       aria-modal="true"
       aria-label={`Details for ${fraudCase.transaction_id}`}
+      initial={{ x: "100%" }}
+      animate={{ x: 0 }}
+      exit={{ x: "100%" }}
+      transition={{ type: "spring", damping: 32, stiffness: 300 }}
     >
-      {/* Backdrop */}
-      <motion.div
-        className="absolute inset-0 bg-black/40 backdrop-blur-sm"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        onClick={onClose}
-      />
+      {/* ── STICKY PAGE HEADER ──────────────────────────────────────────── */}
+      <div className="sticky top-0 z-10 border-b border-zinc-200 bg-white/90 backdrop-blur-md">
+        <div className="mx-auto flex max-w-5xl items-center gap-4 px-6 py-4">
+          <button
+            className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-zinc-200 bg-white px-4 py-2 text-sm font-semibold text-zinc-700 shadow-sm transition-colors hover:bg-zinc-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-950"
+            onClick={onClose}
+            type="button"
+            aria-label="Back to review"
+          >
+            <X className="h-4 w-4" />
+            Back to Review
+          </button>
+          <div className="min-w-0 flex-1">
+            <p className="truncate font-mono text-sm font-semibold text-zinc-400">
+              {fraudCase.transaction_id} · {fraudCase.card_id}
+            </p>
+          </div>
+          <span className={`inline-flex shrink-0 rounded-full border px-3 py-1 text-sm font-bold ${sev.border} ${sev.bg} ${sev.text}`}>
+            {fraudCase.severity}
+          </span>
+        </div>
+      </div>
 
-      {/* Sheet */}
-      <motion.div
-        className="relative z-10 max-h-[88vh] w-full max-w-lg overflow-y-auto rounded-t-2xl bg-white shadow-2xl sm:rounded-2xl"
-        initial={{ y: "100%" }}
-        animate={{ y: 0 }}
-        exit={{ y: "100%" }}
-        transition={{ type: "spring", damping: 30, stiffness: 280 }}
-      >
-        {/* Handle bar (mobile) */}
-        <div className="flex justify-center pt-3 sm:hidden">
-          <div className="h-1 w-10 rounded-full bg-zinc-300" />
+      {/* ── PAGE CONTENT ───────────────────────────────────────────────── */}
+      <div className="mx-auto max-w-5xl px-6 pb-16 pt-8">
+
+        {/* Hero row */}
+        <div>
+          <h1 className="text-4xl font-bold text-zinc-950">{fraudCase.merchant_name}</h1>
+          <p className="mt-2 text-base text-zinc-500">
+            {fraudCase.timestamp} · {fraudCase.channel.replace("_", " ")} ·{" "}
+            {fraudCase.cardholder_country}
+            {isForeign ? ` → ${fraudCase.merchant_country}` : ""}
+          </p>
         </div>
 
-        <div className="p-6">
-          {/* Header */}
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <p className="font-mono text-xs font-semibold text-zinc-400">
-                {fraudCase.transaction_id} · {fraudCase.card_id}
-              </p>
-              <h2 className="mt-1 text-xl font-semibold text-zinc-950">
-                {fraudCase.merchant_name}
-              </h2>
-              <p className="mt-0.5 text-sm text-zinc-500">
-                {new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(fraudCase.amount)}
-                {" · "}
-                {fraudCase.timestamp}
-              </p>
-            </div>
-            <button
-              className="cursor-pointer rounded-lg p-1.5 text-zinc-400 hover:bg-zinc-100 hover:text-zinc-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-950"
-              onClick={onClose}
-              type="button"
-              aria-label="Close details"
-            >
-              <X className="h-5 w-5" />
-            </button>
+        {/* KPI row — 3 large cards */}
+        <div className="mt-6 grid grid-cols-3 gap-4">
+          <div className={`rounded-2xl border p-6 ${sev.border} ${sev.bg}`}>
+            <p className="text-sm font-semibold uppercase tracking-wider text-zinc-500">Risk Score</p>
+            <p className={`mt-3 text-7xl font-black tabular-nums leading-none ${sev.score}`}>
+              {fraudCase.fraud_score}
+            </p>
+            <p className="mt-2 text-base font-medium text-zinc-500">out of 100</p>
           </div>
+          <div className="rounded-2xl border border-zinc-200 bg-white p-6">
+            <p className="text-sm font-semibold uppercase tracking-wider text-zinc-500">Amount</p>
+            <p className="mt-3 text-4xl font-black tabular-nums leading-none text-zinc-950">
+              {money.format(fraudCase.amount)}
+            </p>
+            <p className="mt-2 text-base font-medium capitalize text-zinc-500">
+              {fraudCase.channel.replace("_", " ")}
+            </p>
+          </div>
+          <div className="rounded-2xl border border-red-200 bg-red-50 p-6">
+            <p className="text-sm font-semibold uppercase tracking-wider text-zinc-500">vs. Normal</p>
+            <p className="mt-3 text-7xl font-black tabular-nums leading-none text-red-600">
+              {fraudCase.baseline.amount_ratio}×
+            </p>
+            <p className="mt-2 text-base font-medium text-zinc-500">
+              median {money.format(fraudCase.baseline.median_amount)}
+            </p>
+          </div>
+        </div>
 
-          {/* All fraud signals */}
-          <section className="mt-6">
-            <h3 className="text-xs font-semibold uppercase tracking-wider text-zinc-400">
-              All Fraud Signals
-            </h3>
-            <ul className="mt-3 space-y-2">
-              {fraudCase.reasons.map((reason) => (
-                <li key={reason} className="flex items-start gap-2.5 text-sm text-zinc-700">
-                  <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-500" />
-                  {reason}
-                </li>
-              ))}
-            </ul>
-          </section>
+        {/* Two-column layout below KPIs */}
+        <div className="mt-8 grid gap-8 lg:grid-cols-[1fr_380px]">
 
-          {/* Baseline comparison */}
-          <section className="mt-6">
-            <h3 className="text-xs font-semibold uppercase tracking-wider text-zinc-400">
-              Baseline vs. This Transaction
-            </h3>
-            <div className="mt-3 space-y-2 rounded-xl border border-zinc-100 bg-zinc-50 p-4">
-              {[
-                ["Median spend", money.format(fraudCase.baseline.median_amount)],
-                [
-                  "This transaction",
-                  `${money.format(fraudCase.amount)} (${fraudCase.baseline.amount_ratio}×)`,
-                  fraudCase.baseline.amount_ratio >= 3 ? "font-semibold text-red-600" : "font-semibold text-zinc-900",
-                ],
-                ["Usual categories", fraudCase.baseline.common_categories.slice(0, 3).join(", ")],
-                ["Usual countries",  fraudCase.baseline.usual_countries.join(", ")],
-                ["Known devices",    String(fraudCase.baseline.known_devices_count)],
-                ["Known IPs",        String(fraudCase.baseline.known_ips_count)],
-              ].map(([label, value, valueClass]) => (
-                <div key={label} className="flex items-baseline justify-between gap-4">
-                  <span className="text-sm text-zinc-500">{label}</span>
-                  <span className={`text-sm ${valueClass ?? "font-medium text-zinc-800"}`}>
-                    {value}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </section>
-
-          {/* Timeline */}
-          {fraudCase.timeline.length > 0 && (
-            <section className="mt-6">
-              <h3 className="text-xs font-semibold uppercase tracking-wider text-zinc-400">
-                Event Timeline
-              </h3>
-              <ol className="mt-3 space-y-0">
-                {fraudCase.timeline.map((event, i) => (
-                  <li key={`${event.time}-${event.label}`} className="flex gap-3">
-                    <div className="flex flex-col items-center">
-                      <div
-                        className={`mt-1 h-2.5 w-2.5 shrink-0 rounded-full ${timelineColor[event.type] ?? "bg-zinc-300"}`}
-                      />
-                      {i < fraudCase.timeline.length - 1 && (
-                        <div className="mt-0.5 w-px flex-1 bg-zinc-200" />
-                      )}
-                    </div>
-                    <div className="pb-4">
-                      <div className="flex items-center gap-2">
-                        <span className="font-mono text-xs font-semibold text-zinc-400">
-                          {event.time}
-                        </span>
-                        <span className="text-sm font-semibold text-zinc-900">{event.label}</span>
-                      </div>
-                      <p className="mt-0.5 text-sm leading-5 text-zinc-600">{event.description}</p>
-                    </div>
+          {/* LEFT column: signals + timeline */}
+          <div className="space-y-8">
+            <PageSection title="Fraud Signals">
+              <ul className="space-y-3">
+                {fraudCase.reasons.map((reason, i) => (
+                  <li
+                    key={reason}
+                    className={`flex items-start gap-4 rounded-2xl border px-5 py-4 text-base leading-7 ${signalPriority(i)}`}
+                  >
+                    <AlertTriangle className="mt-1 h-5 w-5 shrink-0" />
+                    {reason}
                   </li>
                 ))}
-              </ol>
-            </section>
-          )}
+              </ul>
+            </PageSection>
 
-          {/* Related activity */}
-          {fraudCase.related_activity.length > 0 && (
-            <section className="mt-6">
-              <h3 className="text-xs font-semibold uppercase tracking-wider text-zinc-400">
-                Related Activity
-              </h3>
-              <div className="mt-3 space-y-2">
-                {fraudCase.related_activity.map((item) => (
-                  <div
-                    key={item.transaction_id}
-                    className="rounded-xl border border-zinc-100 bg-zinc-50 p-3"
-                  >
-                    <div className="flex items-baseline justify-between gap-2">
-                      <span className="font-mono text-xs font-semibold text-zinc-500">
-                        {item.transaction_id}
-                      </span>
-                      <span className="text-sm font-semibold text-zinc-900">
-                        {money.format(item.amount)}
-                      </span>
-                    </div>
-                    <p className="mt-1 text-xs text-zinc-500">
-                      {item.merchant_name} · {item.reason}
+            {fraudCase.timeline.length > 0 && (
+              <PageSection title="Event Timeline">
+                <ol className="space-y-3">
+                  {fraudCase.timeline.map((event) => {
+                    const ts = timelineStyles[event.type] ?? timelineStyles.normal;
+                    return (
+                      <li
+                        key={`${event.time}-${event.label}`}
+                        className="flex overflow-hidden rounded-2xl border border-zinc-200 bg-white"
+                      >
+                        <div className={`w-2 shrink-0 ${ts.bar}`} />
+                        <div className="flex flex-1 items-start gap-5 px-5 py-5">
+                          <div className="flex shrink-0 flex-col items-start gap-2">
+                            <span className="font-mono text-base font-bold text-zinc-600">
+                              {event.time}
+                            </span>
+                            <span className={`rounded-full px-2.5 py-1 text-xs font-bold uppercase tracking-wide ${ts.badge}`}>
+                              {ts.label}
+                            </span>
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-lg font-semibold text-zinc-900">{event.label}</p>
+                            <p className="mt-1.5 text-base leading-7 text-zinc-500">{event.description}</p>
+                          </div>
+                        </div>
+                      </li>
+                    );
+                  })}
+                </ol>
+              </PageSection>
+            )}
+          </div>
+
+          {/* RIGHT column: spend comparison + related activity */}
+          <div className="space-y-8">
+            <PageSection title="Spend Comparison">
+              <div className="rounded-2xl border border-zinc-200 bg-white p-6">
+                <div className="flex items-end justify-between gap-2">
+                  <div>
+                    <p className="text-sm text-zinc-500">Normal median</p>
+                    <p className="mt-0.5 text-xl font-bold text-zinc-800">
+                      {money.format(fraudCase.baseline.median_amount)}
                     </p>
                   </div>
-                ))}
+                  <div className="text-right">
+                    <p className="text-sm text-zinc-500">This transaction</p>
+                    <p className="mt-0.5 text-xl font-bold text-red-600">
+                      {money.format(fraudCase.amount)}
+                    </p>
+                  </div>
+                </div>
+                <div className="relative mt-4 h-5 overflow-hidden rounded-full bg-zinc-100">
+                  <div
+                    className="absolute left-0 top-0 h-full rounded-full bg-emerald-500"
+                    style={{ width: `${barNormalPct}%` }}
+                  />
+                  <div
+                    className="absolute top-0 h-full rounded-full bg-red-500"
+                    style={{ left: `${barNormalPct}%`, right: 0 }}
+                  />
+                </div>
+                <p className="mt-2 text-right text-sm font-semibold text-red-500">
+                  {fraudCase.baseline.amount_ratio}× over median
+                </p>
+
+                <div className="mt-5 grid grid-cols-2 gap-4 border-t border-zinc-100 pt-5">
+                  {[
+                    ["Usual countries", fraudCase.baseline.usual_countries.join(", "), false],
+                    ["Merchant country", fraudCase.merchant_country, isForeign],
+                    ["Usual categories", fraudCase.baseline.common_categories.slice(0, 2).join(", "), false],
+                    ["Known devices", String(fraudCase.baseline.known_devices_count), false],
+                  ].map(([label, value, highlight]) => (
+                    <div key={String(label)}>
+                      <p className="text-xs font-semibold uppercase tracking-wider text-zinc-400">{label}</p>
+                      <p className={`mt-1 text-base font-semibold ${highlight ? "text-red-600" : "text-zinc-800"}`}>
+                        {value}
+                        {label === "Merchant country" && isForeign && " ✗"}
+                        {label === "Usual countries" && !isForeign && " ✓"}
+                      </p>
+                    </div>
+                  ))}
+                </div>
               </div>
-            </section>
-          )}
+            </PageSection>
+
+            {fraudCase.related_activity.length > 0 && (
+              <PageSection title={`Related Activity (${fraudCase.related_activity.length})`}>
+                <div className="space-y-3">
+                  {fraudCase.related_activity.map((item) => (
+                    <div
+                      key={item.transaction_id}
+                      className="flex items-start gap-4 rounded-2xl border border-zinc-200 bg-white px-5 py-4"
+                    >
+                      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-zinc-100">
+                        <ShieldAlert className="h-5 w-5 text-zinc-500" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-baseline justify-between gap-2">
+                          <span className="font-mono text-sm font-semibold text-zinc-500">
+                            {item.transaction_id}
+                          </span>
+                          <span className="shrink-0 text-base font-bold text-zinc-900">
+                            {money.format(item.amount)}
+                          </span>
+                        </div>
+                        <p className="mt-1 text-base font-medium text-zinc-700">{item.merchant_name}</p>
+                        <p className="mt-0.5 text-sm text-zinc-400">{item.reason}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </PageSection>
+            )}
+          </div>
         </div>
-      </motion.div>
-    </div>
+      </div>
+    </motion.div>
   );
 }
