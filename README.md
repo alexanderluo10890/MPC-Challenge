@@ -36,9 +36,14 @@ Each transaction is scored using:
 - per-card amount and behavior baselines
 - rare category, country, channel, device, and IP signals
 - velocity windows for card activity
-- card-testing patterns
-- merchant and category burst detection
+- card-testing patterns, including a symmetric (±1h) burst counter that flags every
+  probe in a testing burst — not just the trailing ones a backward-only window catches
+- merchant and category burst detection (catches the cross-card "QuickPay Online" ring)
 - shared device/IP activity across cards
+
+Flag thresholds are calibrated against the dataset's four fraud patterns:
+Conservative (score ≥ 70, highest precision), Balanced (≥ 60, F1-optimal),
+Aggressive (≥ 50, highest recall). See `docs/HYPOTHESIS_LOG.md` for the precision/recall/F1 table.
 
 ## Reliability Safeguards
 
@@ -59,6 +64,14 @@ Reviewers can:
 - use keyboard shortcuts and quick-review arrows
 - undo the last decision
 - inspect an audit log
+- export an updated CSV (`<file>_reviewed.csv`) containing every original column plus
+  `risk_score`, `severity`, `flagged`, `is_fraud`, `review_status`, `detected_patterns`,
+  and `reasons` — escalated transactions are marked `is_fraud=TRUE`
+
+## Repository Layout
+
+- `fraud_detector.py`, `transactions.csv`, `tests/`, `docs/` — Python scoring engine, data, tests, and product docs (repo root)
+- `flagly/` — the Next.js reviewer app (run from here); it calls the root detector via `/api/score`
 
 ## Why Not Pure ML?
 

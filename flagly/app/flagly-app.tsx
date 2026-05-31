@@ -52,8 +52,10 @@ import {
   processingSteps,
 } from "./mock-data";
 import {
+  buildExportCsv,
   buildMockFraudCases,
   getFlaggedCases,
+  getSensitivityThreshold,
   parseTransactionsCsv,
   type ScoredTransactionCsvRow,
 } from "./csv-analysis";
@@ -547,8 +549,36 @@ export default function FraudFrogApp() {
   };
 
   const handleExport = () => {
+    const exportCases = withStatuses(allScoredCases, statuses);
+    if (exportCases.length === 0) {
+      addToast("Process a transactions file before exporting.", "warning");
+      return;
+    }
+
+    const csv = buildExportCsv(
+      exportCases,
+      statuses,
+      getSensitivityThreshold(sensitivity),
+    );
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const baseName = (datasetSummary.fileName || "transactions.csv").replace(
+      /\.csv$/i,
+      "",
+    );
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `${baseName}_reviewed.csv`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+
+    const escalated = exportCases.filter(
+      (fraudCase) => statuses[fraudCase.transaction_id] === "escalated_fraud",
+    ).length;
     addToast(
-      "Updated CSV export prepared with fraud_score, severity, flagged, review_status, reasons, and detected_patterns.",
+      `Exported ${number.format(exportCases.length)} transactions (${escalated} marked as fraud) with scores, reasons, and review decisions.`,
       "success",
     );
   };
